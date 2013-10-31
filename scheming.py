@@ -1,6 +1,4 @@
-from pdfminer.pdfdevice import PDFDevice
-from pdfminer.pdfparser import PDFParser, PDFDocument, PDFNoOutlines
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+import PyPDF2
 
 import pygame
 from pygame.locals import *
@@ -11,71 +9,43 @@ import random
 
 def parse_pdf (pdf_doc):
     """Open the pdf document, and apply the function, returning the results"""
-    # open the pdf file
-    fp = open(pdf_doc, 'rb')
-    # create a parser object associated with the file object
-    parser = PDFParser(fp)
-    # create a PDFDocument object that stores the document structure
-    doc = PDFDocument()
-    # connect the parser and document objects
-    parser.set_document(doc)
-    doc.set_parser(parser)
-    # supply the password for initialization
-    doc.initialize()
+    reader = PyPDF2.PdfFileReader(open(pdf_doc, 'rb'))
 
-    assert doc.is_extractable
-
-    return parse_pages(doc)
+    return parse_pages(reader)
 
 class Path(object):
     pass
 
-class SchemingDevice(PDFDevice):
-    def __init__(self, rsrcmgr):
-        PDFDevice.__init__(self, rsrcmgr)
-
-        self.paths = []
-
-    def paint_path(self, gs, stroke, fill, evenodd, path):
-        p = Path()
-        p.typestr = '{:d}{:d}{:d}'.format(stroke, fill, evenodd)
-        p.shapestr = ''.join(x[0] for x in path)
-        p.path = path
-        self.paths.append(p)
-
 def parse_pages(doc):
     """With an open PDFDocument object, get the pages and parse each one
     [this is a higher-order function to be passed to parse_pdf()]"""
-    rsrcmgr = PDFResourceManager()
-    device = SchemingDevice(rsrcmgr)
-    interpreter = PDFPageInterpreter(rsrcmgr, device)
 
-    page = list(doc.get_pages())[1]
-    interpreter.process_page(page)
+    page = doc.getPage(1)
+    contents = PyPDF2.pdf.ContentStream(page.getContents(), page.pdf)
 
-    return device.paths
+    return list(get_paths(contents.operations))
+
+def get_paths(ops):
+    for op in ops:
+        if op[1] in 'mlch':
+            yield (map(float, op[0]), op[1])
 
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
 
-def show_path(window, path, map_pt):
-    assert path.path[0][0] == 'm'
-
-    if any(s[0] == 'c' for s in path.path):
-        return
-
-    for step in path.path[0:]:
-        c = step[0]
+def show_paths(window, paths, map_pt):
+    for step in paths:
+        c = step[-1]
         if c == 'm':
-            pos = (step[1], step[2])
+            pos = (step[0][0], step[0][1])
             start = pos
             col = gencol()
 
         elif c in 'lc':
             if c == 'l':
-                pos2 = (step[1], step[2])
+                pos2 = (step[0][0], step[0][1])
             elif c == 'c':
-                pos2 = (step[5], step[6])
+                pos2 = (step[0][4], step[0][5])
 
             pygame.draw.line(window, col,
                     map_pt(pos), map_pt(pos2))
@@ -85,9 +55,6 @@ def show_path(window, path, map_pt):
             pygame.draw.line(window, (255, 255, 255),
                     map_pt(pos), map_pt(start))
             pos = start
-
-        else:
-            raise 'unhandled ins: {}'.format(c)
 
 def with_window(fn, *args):
     window = pygame.display.set_mode((800, 600))#, pygame.FULLSCREEN)
@@ -99,68 +66,56 @@ def with_window(fn, *args):
     finally:
         pygame.display.quit()
 
-def key_path(window, paths, ix=0):
+def to_doc(pix_pos, ws, view):
+    ((xl, yl), (xh, yh)) = view
 
-    def map_pt(pt):
-        x,y = pt
-        return y*(1440/1190.0), x*(900/860.0)
+    # map pos to doc
+    x, y = pix_pos
+    xd = xl + x / float(ws[0]) * (xh - xl)
+    yd = yl + y / float(ws[1]) * (yh - yl)
 
-    window.fill((0, 0, 0))
-    show_path(window, paths[ix], map_pt)
-    pygame.display.flip()
+    return (xd, yd)
 
-    while True:
-        ev = pygame.event.wait()
-        if ev.type == KEYDOWN:
-            if ev.key == K_LEFT:
-                ix = (ix + len(paths) - 1) % len(paths)
-            elif ev.key == K_RIGHT:
-                ix = (ix + len(paths) + 1) % len(paths)
-            elif ev.key == K_a:
-                window.fill((0, 0, 0))
-                for p in paths:
-                    show_path(window, p, map_pt)
-                pygame.display.flip()
-                continue
-            elif ev.key == K_RETURN:
-                print ix
-                break
-            else:
-                continue
+def from_doc(doc_pos, ws, view):
+    x, y = doc_pos
+    ((xl, yl), (xh, yh)) = view
 
-            window.fill((0, 0, 0))
-            show_path(window, paths[ix], map_pt)
-            pygame.display.flip()
+    return (ws[0] * (x - xl) / float(xh - xl),
+            ws[1] * (y - yl) / float(yh - yl))
 
 def zoomview(window, paths):
 
     ws = window.get_size()
 
-    ys = [s[1] for p in paths for s in p.path if len(s) > 1]
-    xs = [s[2] for p in paths for s in p.path if len(s) > 1]
+    ys = [s[0][0] for s in paths if s[-1] in 'ml']
+    xs = [s[0][1] for s in paths if s[-1] in 'ml']
 
     last_view = (0, 0, 0, 0)
     view = ((min(xs), min(ys)), (max(xs), max(ys)))
 
     def view_pt(pt):
-        y, x = pt
-
-        ((xl, yl), (xh, yh)) = view
-
-        return (ws[0] * (x - xl) / float(xh - xl),
-                ws[1] * (y - yl) / float(yh - yl))
+        return from_doc((pt[1], pt[0]), ws, view)
 
     moving = False
+    selecting = False
+    last_selecting = False
 
     while True:
-        if view != last_view:
+        if view != last_view or selecting or last_selecting:
             random.seed(0)
             window.fill((0, 0, 0))
-            for p in paths:
-                show_path(window, p, view_pt)
+            show_paths(window, paths, view_pt)
+
+            if selecting:
+                x, y = og_pos
+                mx, my = pygame.mouse.get_pos()
+                pygame.draw.rect(window, (255, 255, 255),
+                        (x, y, mx-x, my-y), 1)
+
             pygame.display.flip()
 
         last_view = view
+        last_selecting = selecting
 
         ev = pygame.event.wait()
         if ev.type == MOUSEBUTTONDOWN:
@@ -170,9 +125,7 @@ def zoomview(window, paths):
                 ((xl, yl), (xh, yh)) = view
 
                 # map pos to doc
-                x, y = ev.pos
-                xd = xl + x / float(ws[0]) * (xh - xl)
-                yd = yl + y / float(ws[1]) * (yh - yl)
+                (xd, yd) = to_doc(ev.pos, ws, view)
 
                 # recentre view on pos, and adjust
                 xl, yl, xh, yh = xl-xd, yl-yd, xh-xd, yh-yd
@@ -185,6 +138,9 @@ def zoomview(window, paths):
                 og_view = view
                 og_pos = ev.pos
                 moving = True
+            elif ev.button == 3:
+                og_pos = ev.pos
+                selecting = True
         elif ev.type == MOUSEMOTION:
             if moving:
                 dx, dy = ev.pos[0] - og_pos[0], ev.pos[1] - og_pos[1]
@@ -193,9 +149,20 @@ def zoomview(window, paths):
                 dvx, dvy = dx / float(ws[0]) * (xh-xl), dy / float(ws[1]) * (yh-yl)
 
                 view = ((xl-dvx, yl-dvy), (xh-dvx, yh-dvy))
+
         elif ev.type == MOUSEBUTTONUP:
             if ev.button == 1:
                 moving = False
+            elif ev.button == 3:
+                ((xl, yl), (xh, yh)) = view
+
+                pta = to_doc(og_pos, ws, view)
+                ptb = to_doc(ev.pos, ws, view)
+
+                ul = (min(pta[0], ptb[0]), min(pta[1], ptb[1]))
+                lr = (max(pta[0], ptb[0]), max(pta[1], ptb[1]))
+
+                selecting = False
         elif ev.type == KEYDOWN:
             if ev.key == K_RETURN:
                 print view
