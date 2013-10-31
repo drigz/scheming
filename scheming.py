@@ -5,6 +5,8 @@ from pygame.locals import *
 
 import time
 
+import json
+
 import random
 
 def parse_pdf (pdf_doc):
@@ -26,14 +28,11 @@ def parse_pages(doc):
     return list(get_paths(contents.operations))
 
 def get_paths(ops):
-    def swapsies(xs):
-        for i in range(0, len(xs), 2):
-            yield xs[i+1]
-            yield xs[i]
-
     for op in ops:
-        if op[1] in 'mlch':
-            yield (map(float, tuple(swapsies(op[0]))), op[1])
+        if op[1] in 'mlh':
+            yield (map(float, (op[0][1], op[0][0])), op[1])
+        elif op[1] == 'c':
+            yield (map(float, (op[0][5], op[0][4])), op[1])
 
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
@@ -47,16 +46,14 @@ def show_paths(window, paths, map_pt):
             col = gencol()
 
         elif c in 'lc':
-            if c == 'l':
-                pos2 = (step[0][0], step[0][1])
-            elif c == 'c':
-                pos2 = (step[0][4], step[0][5])
+            pos2 = (step[0][0], step[0][1])
 
             pygame.draw.line(window, col,
                     map_pt(pos), map_pt(pos2))
             pos = pos2
 
         elif c == 'h':
+            print 'hhhh'
             pygame.draw.line(window, (255, 255, 255),
                     map_pt(pos), map_pt(start))
             pos = start
@@ -87,6 +84,22 @@ def from_doc(doc_pos, ws, view):
 
     return (ws[0] * (x - xl) / float(xh - xl),
             ws[1] * (y - yl) / float(yh - yl))
+
+def extract_path(paths, ul, lr):
+    (ulx, uly) = ul
+    (lrx, lry) = lr
+    started = stopped = False
+    for (x, y), c in paths:
+        if ulx <= x <= lrx and uly <= y <= lry:
+            if stopped:
+                yield 'gap'
+                stopped = False
+
+            started = True
+
+            yield ((x, y), c)
+        elif started:
+            stopped = True
 
 def zoomview(window, paths):
 
@@ -166,6 +179,9 @@ def zoomview(window, paths):
 
                 ul = (min(pta[0], ptb[0]), min(pta[1], ptb[1]))
                 lr = (max(pta[0], ptb[0]), max(pta[1], ptb[1]))
+
+                for x in extract_path(paths, ul, lr):
+                    print x
 
                 selecting = False
         elif ev.type == KEYDOWN:
