@@ -26,9 +26,14 @@ def parse_pages(doc):
     return list(get_paths(contents.operations))
 
 def get_paths(ops):
+    def swapsies(xs):
+        for i in range(0, len(xs), 2):
+            yield xs[i+1]
+            yield xs[i]
+
     for op in ops:
         if op[1] in 'mlch':
-            yield (map(float, op[0]), op[1])
+            yield (map(float, tuple(swapsies(op[0]))), op[1])
 
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
@@ -87,14 +92,14 @@ def zoomview(window, paths):
 
     ws = window.get_size()
 
-    ys = [s[0][0] for s in paths if s[-1] in 'ml']
-    xs = [s[0][1] for s in paths if s[-1] in 'ml']
+    ys = [s[0][1] for s in paths if s[-1] in 'ml']
+    xs = [s[0][0] for s in paths if s[-1] in 'ml']
 
     last_view = (0, 0, 0, 0)
     view = ((min(xs), min(ys)), (max(xs), max(ys)))
 
     def view_pt(pt):
-        return from_doc((pt[1], pt[0]), ws, view)
+        return from_doc(pt, ws, view)
 
     moving = False
     selecting = False
