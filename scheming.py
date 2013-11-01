@@ -101,6 +101,37 @@ def extract_path(paths, ul, lr):
         elif started:
             stopped = True
 
+def diff_path(path):
+    assert path[0][1] == 'm'
+    px, py = path[0][0]
+
+    for (x, y), c in path[1:]:
+        yield (x-px, y-py), c
+        px, py = x, y
+
+def save_path(path):
+    pathdict = json.load(open('scheming.json', 'r'))
+    c = raw_input('enter char: ')
+    if c in pathdict:
+        print cmp_path(list(path), pathdict[c])
+    else:
+        pathdict[c] = list(path)
+        json.dump(pathdict, open('scheming.json', 'w'))
+
+def cmp_path(path1, path2):
+    if len(path1) != len(path2):
+        print 'different lengths ({}, {}). trying prefix'.format(len(path1), len(path2))
+
+    ans = []
+    from math import sqrt
+    for ((x1, y1), c1), ((x2, y2), c2) in zip(path1, path2):
+        s = '{:.2g}'.format(max(abs(x1-x2), abs(y1-y2)))
+        if c1 != c2:
+            s = s+'*'
+        ans.append(s)
+
+    return ', '.join(ans)
+
 def zoomview(window, paths):
 
     ws = window.get_size()
@@ -138,7 +169,9 @@ def zoomview(window, paths):
         ev = pygame.event.wait()
         if ev.type == MOUSEBUTTONDOWN:
             if ev.button == 4 or ev.button == 5:
-                zf = 1.05 if ev.button == 5 else 0.95
+                zf = 0.8
+                if ev.button == 5:
+                    zf = 1/zf
 
                 ((xl, yl), (xh, yh)) = view
 
@@ -180,11 +213,44 @@ def zoomview(window, paths):
                 ul = (min(pta[0], ptb[0]), min(pta[1], ptb[1]))
                 lr = (max(pta[0], ptb[0]), max(pta[1], ptb[1]))
 
-                for x in extract_path(paths, ul, lr):
-                    print x
+                path = list(extract_path(paths, ul, lr))
+                if 'gap' in path:
+                    print 'gap in path'
+                    continue
+
+                save_path(diff_path(path))
 
                 selecting = False
         elif ev.type == KEYDOWN:
             if ev.key == K_RETURN:
                 print view
                 return
+
+def match_paths(pathdict, paths, tol=0.1):
+    paths = diff_path(paths)
+
+    options = []
+
+    def match_step(step1, step2):
+        ((x1, y1), c1) = step1
+        ((x2, y2), c2) = step2
+
+        return c1 == c2 and abs(x1-x2) < tol and abs(y1-y2) < tol
+
+    for (i, step) in enumerate(paths):
+        # evaluate current options
+        options = [(char, pos+1) for (char, pos) in options
+                if match_step(step, pathdict[char][pos])]
+
+        # try starting a new option
+        for char, path in pathdict.iteritems():
+            if match_step(step, path[0]):
+                options.append((char, 1))
+
+        new_options = []
+        for char, pos in options:
+            if pos == len(pathdict[char]):
+                print 'match {} at {} ({})'.format(char, i-pos, pos)
+            else:
+                new_options.append((char, pos))
+        options = new_options
