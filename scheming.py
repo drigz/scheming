@@ -115,7 +115,11 @@ def save_path(path):
     if c in pathdict:
         print cmp_path(list(path), pathdict[c])
     else:
-        pathdict[c] = list(path)
+        path = list(path)
+        pathdict[c] = {
+                'origin': path_origin(path),
+                'path': path,
+                }
         json.dump(pathdict, open('scheming.json', 'w'))
 
 def cmp_path(path1, path2):
@@ -131,6 +135,19 @@ def cmp_path(path1, path2):
         ans.append(s)
 
     return ', '.join(ans)
+
+def path_origin(path):
+    px, py = 0, 0
+    ox, oy = 0, 0
+
+    for (dx, dy), c in path:
+        px += dx
+        py += dy
+
+        ox = min(px, ox)
+        oy = min(py, oy)
+
+    return (ox, oy)
 
 def zoomview(window, paths):
 
@@ -240,16 +257,16 @@ def match_paths(pathdict, paths, tol=0.1):
     for (i, step) in enumerate(paths):
         # evaluate current options
         options = [(char, pos+1) for (char, pos) in options
-                if match_step(step, pathdict[char][pos])]
+                if match_step(step, pathdict[char]['path'][pos])]
 
         # try starting a new option
         for char, path in pathdict.iteritems():
-            if match_step(step, path[0]):
+            if match_step(step, path['path'][0]):
                 options.append((char, 1))
 
         new_options = []
         for char, pos in options:
-            if pos == len(pathdict[char]):
+            if pos == len(pathdict[char]['path']):
                 print 'match {} at {} ({})'.format(char, i-pos, pos)
             else:
                 new_options.append((char, pos))
