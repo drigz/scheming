@@ -138,8 +138,10 @@ class ZoomView(object):
         random.seed(0)
         window.fill((0, 0, 0))
 
-        for (x1, y1, x2, y2) in self.line_screen_coords():
-            pygame.draw.line(window, (255, 255, 255), (x1, y1), (x2, y2))
+        dl = pygame.draw.line
+        col = (255, 255, 255)
+        for x in self.line_screen_coords():
+            dl(window, col, x[:2], x[2:])
 
     def line_screen_coords(self):
         '''Using self.view and self.ws, transforms self.lines to in-window
