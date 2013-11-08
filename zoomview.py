@@ -13,8 +13,11 @@ class ZoomView(object):
         lines. Each entry in the array of lines should be a 4-element iterable
         containing the (x,y)-coords of the start and end of the line.'''
 
-        self.lines = numpy.asarray(lines)
+        self.set_lines(lines)
         self.ws = ws
+
+    def set_lines(self, lines):
+        self.lines = numpy.asarray(lines)
 
     def show(self):
         window = pygame.display.set_mode(self.ws)

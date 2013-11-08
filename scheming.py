@@ -90,22 +90,45 @@ def match_sigils(sigdict, abs_ops, tol=0.1):
 
 class OriginView(zoomview.ZoomView):
     def __init__(self, abs_ops):
+        self.og_lines = pdf.line_ops_to_lines(abs_ops)
+        zoomview.ZoomView.__init__(self, self.og_lines)
+
         self.sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
         self.matches = match_sigils(self.sigdict, abs_ops)
 
-        lines = pdf.line_ops_to_lines(abs_ops)
-        lines += [(ox-1, oy-1, ox+1, oy+1) for (sig, (ox, oy)) in self.matches] + \
+        self.add_matches()
+
+    def add_matches(self):
+        lines = self.og_lines + \
+                [(ox-1, oy-1, ox+1, oy+1) for (sig, (ox, oy)) in self.matches] + \
                 [(ox+1, oy-1, ox-1, oy+1) for (sig, (ox, oy)) in self.matches]
-        zoomview.ZoomView.__init__(self, lines)
+        self.set_lines(lines)
 
     def handle_select(self, ul, lr):
         (ulx, uly) = ul
         (lrx, lry) = lr
 
         sel_matches = []
+        true_origin_y = 99999999999
         for (sig, (ox, oy)) in self.matches:
             if ulx <= ox <= lrx and uly <= oy <= lry:
                 sel_matches.append( (sig, (ox, oy)) )
+                true_origin_y = min(true_origin_y, oy)
+
+        applied = set()
+        for (sig, (_, false_origin_y)) in sel_matches:
+            if sig.char in applied:
+                continue
+            applied.add(sig.char)
+
+            for m in self.matches:
+                if m[0] is sig:
+                    m[1][1] += true_origin_y - false_origin_y
+
+            self.sigdict[sig.char].origin[1] += true_origin_y - false_origin_y
+
+        # reposition match markers
+        self.add_matches()
 
         print ''.join(m[0].char for m in sel_matches)
         print ', '.join('{:.2f}'.format(m[1][0]) for m in sel_matches)
