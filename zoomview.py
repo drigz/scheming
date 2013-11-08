@@ -33,10 +33,11 @@ class ZoomView(object):
 
         moving = False
         selecting = False
-        last_selecting = False
+
+        redraw = True
 
         while True:
-            if self.view != self.last_view or selecting or last_selecting:
+            if redraw:
                 self.redraw(window)
 
                 if selecting:
@@ -46,9 +47,7 @@ class ZoomView(object):
                             (x, y, mx-x, my-y), 1)
 
                 pygame.display.flip()
-
-            self.last_view = self.view
-            last_selecting = selecting
+                redraw = False
 
             ev = pygame.event.wait()
             if ev.type == MOUSEBUTTONDOWN:
@@ -68,6 +67,7 @@ class ZoomView(object):
 
                     # set new view
                     self.view = ((xl+xd, yl+yd), (xh+xd, yh+yd))
+                    redraw = True
 
                 elif ev.button == 1:
                     og_view = self.view
@@ -76,6 +76,7 @@ class ZoomView(object):
                 elif ev.button == 3:
                     og_pos = ev.pos
                     selecting = True
+
             elif ev.type == MOUSEMOTION:
                 if moving:
                     dx, dy = ev.pos[0] - og_pos[0], ev.pos[1] - og_pos[1]
@@ -85,26 +86,23 @@ class ZoomView(object):
 
                     self.view = ((xl-dvx, yl-dvy), (xh-dvx, yh-dvy))
 
+                redraw = moving or selecting
+
             elif ev.type == MOUSEBUTTONUP:
                 if ev.button == 1:
                     moving = False
                 elif ev.button == 3:
-                    ((xl, yl), (xh, yh)) = self.view
-
                     pta = self.to_doc(og_pos)
                     ptb = self.to_doc(ev.pos)
 
                     ul = (min(pta[0], ptb[0]), min(pta[1], ptb[1]))
                     lr = (max(pta[0], ptb[0]), max(pta[1], ptb[1]))
 
-                    path = list(extract_path(paths, ul, lr))
-                    if 'gap' in path:
-                        print 'gap in path'
-                        continue
-
-                    save_path(diff_path(path))
+                    self.handle_select(ul, lr)
 
                     selecting = False
+                    redraw = True
+
             elif ev.type == KEYDOWN:
                 if ev.key == K_RETURN:
                     return
@@ -153,3 +151,6 @@ class ZoomView(object):
         ysf = self.ws[1] / float(yh - yl)
 
         return (self.lines - [xl, yl, xl, yl]) * [xsf, ysf, xsf, ysf]
+
+    def handle_select(self, ul, lr):
+        print ul, lr
