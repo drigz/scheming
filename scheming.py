@@ -88,27 +88,6 @@ def match_sigils(sigdict, abs_ops, tol=0.1):
     # only return sigil and origin
     return list(match[0:2] for match in matches)
 
-class CaptureView(zoomview.ZoomView):
-    def __init__(self, abs_ops):
-        zoomview.ZoomView.__init__(self, pdf.line_ops_to_lines(abs_ops))
-
-        self.abs_ops = abs_ops
-
-    def handle_select(self, ul, lr):
-        selected_ops = list(extract_ops(self.abs_ops, ul, lr))
-        if 'gap' in selected_ops:
-            print 'gap in selected ops'
-            return
-
-        sig = sigil.Sigil.from_abs_ops(selected_ops)
-        sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
-        c = raw_input('enter char: ')
-        if c in sigdict:
-            print sig.cmp(sigdict[c])
-        else:
-            sigdict[c] = sig
-            sigdict.to_json(open('scheming.json', 'w'))
-
 class OriginView(zoomview.ZoomView):
     def __init__(self, abs_ops):
         self.sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
@@ -132,3 +111,23 @@ class OriginView(zoomview.ZoomView):
         print ', '.join('{:.2f}'.format(m[1][0]) for m in sel_matches)
         print ', '.join('{:.2f}'.format(m[1][1]) for m in sel_matches)
 
+class CaptureView(OriginView):
+    def __init__(self, abs_ops):
+        OriginView.__init__(self, abs_ops)
+
+        self.abs_ops = abs_ops
+
+    def handle_select(self, ul, lr):
+        selected_ops = list(extract_ops(self.abs_ops, ul, lr))
+        if 'gap' in selected_ops:
+            print 'gap in selected ops'
+            return
+
+        sig = sigil.Sigil.from_abs_ops(selected_ops)
+        sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
+        c = raw_input('enter char: ')
+        if c in sigdict:
+            print sig.cmp(sigdict[c])
+        else:
+            sigdict[c] = sig
+            sigdict.to_json(open('scheming.json', 'w'))
