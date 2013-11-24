@@ -1,17 +1,66 @@
 import PyPDF2
 
-def load_line_ops(pdf_path):
-    '''Load a schematic pdf with PdfFileReader, and return a list of line
-    drawing operations.'''
+from PyPDF2.pdf import ContentStream
+from PyPDF2.generic import *
 
-    doc = PyPDF2.PdfFileReader(open(pdf_path, 'rb'))
+class NovelContentStream(ContentStream):
+    def __init__(self, pdf):
+        self.pdf = pdf
+        self.operations = []
 
-    page = doc.getPage(1)
-    contents = PyPDF2.pdf.ContentStream(page.getContents(), page.pdf)
+class SchematicReader(PyPDF2.PdfFileReader):
+    def get_line_ops(self, page_no):
+        '''Return a list of line drawing operations on the given page.'''
 
-    return list(get_line_ops(contents.operations))
+        page = self.getPage(page_no)
+        contents = ContentStream(page.getContents(), page.pdf)
 
-def get_line_ops(ops):
+        return list(filter_line_ops(contents.operations))
+
+    def add_text(self, page_no, text_items):
+        '''Adds text, given as a {string: coords} to the given page.'''
+
+        page = self.getPage(page_no)
+
+        newContentsArray = ArrayObject()
+        newContentsArray.append(ContentStream(page.getContents(), page.pdf))
+
+        addedContents = NovelContentStream(page.pdf)
+        addedContents.operations = list(text_to_operations(text_items))
+        newContentsArray.append(addedContents)
+
+        newContents = ContentStream(newContentsArray, page.pdf)
+
+        page[NameObject('/Contents')] = newContents
+
+def text_to_operations(*args, **kwargs):
+    return objectify_ops(text_to_raw_ops(*args, **kwargs))
+
+def text_to_raw_ops(text_items, font='/TT2'):
+    yield ([], 'BT')
+    yield ([font, 5], 'Tf')
+
+    for text, (x, y) in text_items.items():
+        yield ([1, 0, 0, 1, y, x], 'Tm')
+        yield ([text], 'Tj')
+
+    yield ([], 'ET')
+
+def objectify_ops(ops):
+    def objectify(x):
+        if isinstance(x, str):
+            return TextStringObject(x)
+        elif isinstance(x, int):
+            return NumberObject(x)
+        elif isinstance(x, float):
+            return FloatObject('%.2f' % x)
+        else:
+            raise NotImplementedError('unrecognised object: %r' % x)
+
+    for operands, operation in ops:
+        yield ((objectify(operand) for operand in operands), objectify(operation))
+
+def filter_line_ops(ops):
     '''Filters out the line drawing instructions used by schematics.
 
     Currently also converts Decimal -> float and swaps x & y coords.'''
