@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 
-import time
+import time, math
 
 import json
 
@@ -28,7 +28,7 @@ def extract_ops(ops, ul, lr):
         elif started:
             stopped = True
 
-def match_sigils(sigdict, abs_ops, tol=0.1):
+def match_sigils(sigdict, abs_ops, tol=0.95):
     ops = sigil.diff_ops(abs_ops)
 
     # loop state: an array of (sigil, pos) where sigil is a sigil that
@@ -45,8 +45,16 @@ def match_sigils(sigdict, abs_ops, tol=0.1):
     def match_op(step1, step2):
         ((x1, y1), c1) = step1
         ((x2, y2), c2) = step2
+        n1 = math.sqrt(x1*x1+y1*y1)
+        n2 = math.sqrt(x2*x2+y2*y2)
 
-        return c1 == c2 and abs(x1-x2) < tol and abs(y1-y2) < tol
+        if c1 != c2:
+            return False
+        if n1 < 0.01 or n2 < 0.01:
+            return n1 < 0.01 and n2 < 0.01
+
+        return (x1*x2+y1*y2)/n1/n2 > tol
+        return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
 
     for (i, op) in enumerate(ops):
         # evaluate current options
@@ -77,13 +85,22 @@ def match_sigils(sigdict, abs_ops, tol=0.1):
         _, _, start, end = match
         return (end, -start)
 
+    deleted = []
     matches = list(sorted(matches, key=end_then_start))
     earliest_start = matches[-1][-1]
+    es_char = ''
     for (i, (s, _, start, _)) in reversed(list(enumerate(matches))):
         if start >= earliest_start:
+            deleted.append((s.char, es_char))
             del matches[i]
 
-        earliest_start = min(start, earliest_start)
+        #earliest_start = min(start, earliest_start)
+        if start < earliest_start:
+            earliest_start = start
+            es_char = s.char
+    from collections import Counter
+    for (k,v) in sorted(Counter(deleted).items()):
+        print k, v
 
     # only return sigil and origin
     return list(match[0:2] for match in matches)
