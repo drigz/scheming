@@ -42,8 +42,8 @@ class Sigil(object):
     def rescale(self, sf):
         self.origin = [x*sf for x in self.origin]
 
-        for op in self.ops:
-            op[0] = [x*sf for x in op[0]]
+        for (i, op) in enumerate(self.ops):
+            self.ops[i] = [[x*sf for x in op[0]], op[1]]
 
         self.scale = ops_scale(self.ops)
 
@@ -54,7 +54,7 @@ class Sigil(object):
         ops_str = '[{}]'.format(', '.join(
             '(({:.2f}, {:.2f}), {})'.format(op[0][0], op[0][1], op[1])
             for op in self.ops))
-        return 'Sigil({:r}, {})'.format(self.char, ops_str)
+        return 'Sigil({!r}, {})'.format(self.char, ops_str)
 
 
 class SigilDict(dict):
