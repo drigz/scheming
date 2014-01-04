@@ -56,29 +56,45 @@ def match_sigils(sigdict, abs_ops, tol=0.95):
         return (x1*x2+y1*y2)/n1/n2 > tol
         return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
 
+    # these variables are used to avoid matching a sigil
+    # when the previous or next operation continues the line
+    is_possible_start = is_possible_end = True
+
     for (i, op) in enumerate(ops):
+        operator = op[-1]
+
+        if i+1 < len(ops):
+            is_possible_end = ops[i+1][-1] == 'm'
+        else:
+            is_possible_end = True
+
         # evaluate current options
         options = [(sig, pos+1) for (sig, pos) in options
                 if match_op(op, sig.ops[pos])]
 
         # try starting a new option
-        for sig in sigdict.values():
-            if match_op(op, sig.ops[0]):
-                options.append((sig, 1))
+        if is_possible_start:
+            for sig in sigdict.values():
+                if match_op(op, sig.ops[0]):
+                    options.append((sig, 1))
 
         # detect finished sigs and remove from options
         new_options = []
         for sig, pos in options:
             if pos == len(sig):
-                # get absolute position of sig origin
-                start_op = abs_ops[i+1-pos]
-                origin = [a+b for a,b in zip(start_op[0], sig.origin)]
+                if is_possible_end:
+                    # get absolute position of sig origin
+                    start_op = abs_ops[i+1-pos]
+                    origin = [a+b for a,b in zip(start_op[0], sig.origin)]
 
-                matches.append((sig, origin, i+1-pos, i+1))
-
+                    matches.append((sig, origin, i+1-pos, i+1))
+                # if the sigil couldn't end here, it's spurious, so discard it
             else:
                 new_options.append((sig, pos))
         options = new_options
+
+        # for the next iteration
+        is_possible_start = operator == 'm'
 
     # filter overlapping matches
     def end_then_start(match):
