@@ -65,7 +65,7 @@ def diff_ops(ops):
 
 def ops_origin(ops):
     '''Given a differential ops list, estimate the origin, as a vector from
-    the initial position. The origin is the (min x)-(min y) corner of the
+    the initial position. The origin is the (min x)-(max y) corner of the
     bounding box.'''
 
     px, py = 0, 0
@@ -76,7 +76,7 @@ def ops_origin(ops):
         py += dy
 
         ox = min(px, ox)
-        oy = min(py, oy)
+        oy = max(py, oy)
 
     return (ox, oy)
 
