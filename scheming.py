@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 
-import time, math
+import time, math, sys
 
 import json
 
@@ -163,8 +163,8 @@ class OriginView(zoomview.ZoomView):
 
     def add_matches(self):
         lines = self.og_lines + \
-                [(ox-1, oy-1, ox+1, oy+1) for (sig, (ox, oy)) in self.matches] + \
-                [(ox+1, oy-1, ox-1, oy+1) for (sig, (ox, oy)) in self.matches]
+                [(ox-1, oy-1, ox+1, oy+1) for (sig, (ox, oy), _) in self.matches] + \
+                [(ox+1, oy-1, ox-1, oy+1) for (sig, (ox, oy), _) in self.matches]
         self.set_lines(lines)
 
     def handle_select(self, ul, lr):
@@ -173,13 +173,13 @@ class OriginView(zoomview.ZoomView):
 
         sel_matches = []
         true_origin_y = 99999999999
-        for (sig, (ox, oy)) in self.matches:
+        for (sig, (ox, oy), scale) in self.matches:
             if ulx <= ox <= lrx and uly <= oy <= lry:
-                sel_matches.append( (sig, (ox, oy)) )
+                sel_matches.append( (sig, (ox, oy), scale) )
                 true_origin_y = min(true_origin_y, oy)
 
         applied = set()
-        for (sig, (_, false_origin_y)) in sel_matches:
+        for (sig, (_, false_origin_y), scale) in sel_matches:
             if sig.char in applied:
                 continue
             applied.add(sig.char)
@@ -217,3 +217,17 @@ class CaptureView(OriginView):
         else:
             sigdict[c] = sig
             sigdict.to_json(open('scheming.json', 'w'))
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3 or sys.argv[1] not in ['capture', 'origin']:
+        print 'usage: {} capture|origin schematic.pdf'.format(sys.argv[0])
+
+    rdr = pdf.SchematicReader(open(sys.argv[2], 'rb'))
+    line_ops = rdr.get_line_ops(1)
+
+    if sys.argv[1] == 'capture':
+        v = CaptureView(line_ops)
+    elif sys.argv[1] == 'origin':
+        v = OriginView(line_ops)
+
+    v.show()

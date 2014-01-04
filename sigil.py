@@ -39,8 +39,22 @@ class Sigil(object):
 
         return ', '.join(ans)
 
+    def rescale(self, sf):
+        self.origin = [x*sf for x in self.origin]
+
+        for op in self.ops:
+            op[0] = [x*sf for x in op[0]]
+
+        self.scale = ops_scale(self.ops)
+
     def __len__(self):
         return len(self.ops)
+
+    def __str__(self):
+        ops_str = '[{}]'.format(', '.join(
+            '(({:.2f}, {:.2f}), {})'.format(op[0][0], op[0][1], op[1])
+            for op in self.ops))
+        return 'Sigil({:r}, {})'.format(self.char, ops_str)
 
 
 class SigilDict(dict):
@@ -65,22 +79,35 @@ def diff_ops(ops):
 
     return ans
 
+def ops_bb(ops):
+    '''Given a differential ops list, determine the bounding box as
+    (min x, max x, min y, max y).'''
+
+    px, py = 0, 0
+    xs, ys = [0], [0]
+
+    for (dx, dy), c in ops:
+        px += dx
+        py += dy
+        xs.append(px)
+        ys.append(py)
+
+    return (min(xs), max(xs), min(ys), max(ys))
+
 def ops_origin(ops):
     '''Given a differential ops list, estimate the origin, as a vector from
     the initial position. The origin is the (min x)-(max y) corner of the
     bounding box.'''
 
-    px, py = 0, 0
-    ox, oy = 0, 0
+    min_x, _, _, max_y = ops_bb(ops)
+    return (min_x, max_y)
 
-    for (dx, dy), c in ops:
-        px += dx
-        py += dy
+def ops_height(ops):
+    '''Given a differential ops list, determine the height of the bounding
+    box.'''
 
-        ox = min(px, ox)
-        oy = max(py, oy)
-
-    return (ox, oy)
+    _, _, min_y, max_y = ops_bb(ops)
+    return max_y - min_y
 
 def ops_scale(ops):
     '''Get an arbitrary number indicating the scale of the sigil,
