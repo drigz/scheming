@@ -38,10 +38,16 @@ def text_to_operations(*args, **kwargs):
 
 def text_to_raw_ops(text_items, font='/TT2'):
     yield ([], 'BT')
-    yield ([font, 5], 'Tf')
 
-    for text, (x, y) in text_items.items():
-        yield ([1, 0, 0, 1, y, x], 'Tm')
+    # this font size here seems to have no effect, and you
+    # have to change the scale factor in the text matrix
+    yield ([font, 1], 'Tf')
+
+    yield (['/DeviceRGB'], 'CS')
+    yield ([255, 0, 0], 'sc')
+
+    for text, (x, y) in text_items:
+        yield ([0, 5, -5, 0, y, x], 'Tm')
         yield ([text], 'Tj')
 
     yield ([], 'ET')
