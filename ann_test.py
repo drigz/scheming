@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
         matches = scheming.match_sigils(sigdict, line_ops)
 
-        rdr.add_text(page_no, [(s.char, pos) for (s, pos) in matches])
+        rdr.add_text(page_no, [(s.char, pos, scale) for (s, pos, scale) in matches])
 
     wtr = PyPDF2.PdfFileWriter()
     for p in rdr.pages:

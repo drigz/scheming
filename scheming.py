@@ -83,11 +83,7 @@ def match_sigils(sigdict, abs_ops, tol=0.95):
         for sig, pos in options:
             if pos == len(sig):
                 if is_possible_end:
-                    # get absolute position of sig origin
-                    start_op = abs_ops[i+1-pos]
-                    origin = [a+b for a,b in zip(start_op[0], sig.origin)]
-
-                    matches.append((sig, origin, i+1-pos, i+1))
+                    matches.append((sig, i+1-pos, i+1))
                 # if the sigil couldn't end here, it's spurious, so discard it
             else:
                 new_options.append((sig, pos))
@@ -98,14 +94,14 @@ def match_sigils(sigdict, abs_ops, tol=0.95):
 
     # filter overlapping matches
     def end_then_start(match):
-        _, _, start, end = match
+        _, start, end = match
         return (end, -start)
 
     deleted = []
     matches = list(sorted(matches, key=end_then_start))
     earliest_start = matches[-1][-1]
     es_char = ''
-    for (i, (s, _, start, _)) in reversed(list(enumerate(matches))):
+    for (i, (s, start, _)) in reversed(list(enumerate(matches))):
         if start >= earliest_start:
             deleted.append((s.char, es_char))
             del matches[i]
@@ -118,8 +114,42 @@ def match_sigils(sigdict, abs_ops, tol=0.95):
     for (k,v) in sorted(Counter(deleted).items()):
         print k, v
 
-    # only return sigil and origin
-    return list(match[0:2] for match in matches)
+    processed_matches = []
+
+    # determine scale factors and filter matches with inconsistent scales
+    for s, start, end in matches:
+        # walking a tightrope of fenceposts...
+        doc_ops = ops[start:end]
+
+        doc_sf = sigil.ops_scale(doc_ops) / s.scale
+
+        # check scale factor of each operation
+        scale_error = False
+        for sig_op, doc_op in zip(s.ops, doc_ops):
+            assert sig_op[1] == doc_op[1] # safety net
+
+            sig_n = math.sqrt(sig_op[0][0]**2 + sig_op[0][1]**2)
+            doc_n = math.sqrt(doc_op[0][0]**2 + doc_op[0][1]**2)
+
+            if sig_n < 0.01 or doc_n < 0.01:
+                if not (sig_n < 0.01 and doc_n < 0.01):
+                    scale_error = 'zero'
+            else:
+                sf_error = doc_n / sig_n / doc_sf
+                if sf_error < 0.7 or sf_error > 1.3:
+                    scale_error = 'ratio: {:.2f}'.format(sf_error)
+
+        # get absolute position of sig origin
+        start_op = abs_ops[start]
+        origin = [a+b*doc_sf for a,b in zip(start_op[0], s.origin)]
+
+        if scale_error is False:
+            processed_matches.append((s, origin, doc_sf))
+        else:
+            pass
+            #print 'scale error:', s.char, scale_error
+
+    return processed_matches
 
 class OriginView(zoomview.ZoomView):
     def __init__(self, abs_ops):

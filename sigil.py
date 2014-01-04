@@ -11,6 +11,8 @@ class Sigil(object):
         if origin is None:
             self.origin = ops_origin(ops)
 
+        self.scale = ops_scale(ops)
+
         self.ops = ops
         self.char = char
 
@@ -80,3 +82,15 @@ def ops_origin(ops):
 
     return (ox, oy)
 
+def ops_scale(ops):
+    '''Get an arbitrary number indicating the scale of the sigil,
+    given some differential operations.
+
+    Uses sum |dx_i| + |dy_i|.'''
+
+    ans = 0
+
+    for (dx, dy), _ in ops:
+        ans += abs(dx) + abs(dy)
+
+    return ans

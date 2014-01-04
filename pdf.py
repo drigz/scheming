@@ -43,11 +43,14 @@ def text_to_raw_ops(text_items, font='/TT2'):
     # have to change the scale factor in the text matrix
     yield ([font, 1], 'Tf')
 
+    # switch to red text
     yield (['/DeviceRGB'], 'CS')
     yield ([255, 0, 0], 'sc')
 
-    for text, (x, y) in text_items:
-        yield ([0, 5, -5, 0, y, x], 'Tm')
+    for text, (x, y), scale in text_items:
+        # 5 was chosen by trial and error to approximately match
+        # size of chars in development doc
+        yield ([0, 5*scale, -5*scale, 0, y, x], 'Tm')
         yield ([text], 'Tj')
 
     yield ([], 'ET')
