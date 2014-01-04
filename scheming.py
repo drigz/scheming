@@ -29,6 +29,9 @@ def extract_ops(ops, ul, lr):
             stopped = True
 
 def match_sigils(sigdict, abs_ops, tol=0.93):
+    if len(abs_ops) < 2:
+        return []
+
     ops = sigil.diff_ops(abs_ops)
 
     # loop state: an array of (sigil, pos) where sigil is a sigil that

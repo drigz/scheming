@@ -5,7 +5,7 @@ if __name__ == '__main__':
     rdr = pdf.SchematicReader(open('P1318-005a.pdf', 'rb'))
     sigdict = sigil.SigilDict.from_json(open('scheming.json'))
 
-    for page_no in [1]:
+    for page_no in range(len(rdr.pages)):
         line_ops = rdr.get_line_ops(page_no)
 
         matches = scheming.match_sigils(sigdict, line_ops)
