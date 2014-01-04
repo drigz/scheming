@@ -1,20 +1,19 @@
 import PyPDF2
-import pdf
+import pdf, scheming, sigil
 
-rdr = pdf.SchematicReader(open('P1318-005a.pdf', 'rb'))
+if __name__ == '__main__':
+    rdr = pdf.SchematicReader(open('P1318-005a.pdf', 'rb'))
+    sigdict = sigil.SigilDict.from_json(open('scheming.json'))
 
-rdr.add_text(1, {
-'freemon': (500.0, 500.0),
-'g': (500.0, 480.0),
-'o': (500.6, 480.0),
-'r': (501.1, 480.0),
-'d': (501.4, 480.0),
-'a': (502.0, 480.0),
-'n': (502.6, 480.0),
-})
+    for page_no in [1]:
+        line_ops = rdr.get_line_ops(page_no)
 
-wtr = PyPDF2.PdfFileWriter()
-for p in rdr.pages:
-    wtr.addPage(p)
+        matches = scheming.match_sigils(sigdict, line_ops)
 
-wtr.write(open('modified.pdf', 'wb'))
+        rdr.add_text(page_no, [(s.char, pos) for (s, pos) in matches])
+
+    wtr = PyPDF2.PdfFileWriter()
+    for p in rdr.pages:
+        wtr.addPage(p)
+
+    wtr.write(open('modified.pdf', 'wb'))

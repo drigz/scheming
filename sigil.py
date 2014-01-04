@@ -44,7 +44,7 @@ class Sigil(object):
 class SigilDict(dict):
     @staticmethod
     def from_json(json_file):
-        return SigilDict((k, Sigil(char=k, **v)) for (k, v) in json.load(json_file).items())
+        return SigilDict((k, Sigil(char=str(k), **v)) for (k, v) in json.load(json_file).items())
 
     def to_json(self, json_file):
         json.dump({k: v.to_dict() for (k, v) in self.items()}, json_file)
