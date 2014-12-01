@@ -110,6 +110,9 @@ class ZoomView(object):
                 if ev.key == K_RETURN:
                     return
 
+            elif ev.type == pygame.QUIT:
+                return
+
 
     def init_view(self):
         xs = self.lines[:, [0, 2]]
