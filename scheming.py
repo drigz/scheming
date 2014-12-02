@@ -8,6 +8,7 @@ import json
 import random
 
 import zoomview, pdf, sigil
+from spatialfilter import SpatialFilter
 
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
@@ -151,6 +152,26 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
         else:
             pass
             #print 'scale error:', s.char, scale_error
+
+    # filter out single-operation matches far from other letters
+    ############################################################
+
+    # return early if there are no multi-operation letters
+    if not any(len(s.ops) > 1 for (s, _, sf) in processed_matches):
+        return []
+
+    # first, set the block size to max letter height
+    max_height = max(sf*sigil.ops_height(s.ops)
+            for (s, _, sf) in processed_matches if len(s.ops) > 1)
+    sfilter = SpatialFilter(max_height)
+
+    # then allow regions around letters
+    for s, pos, _ in processed_matches:
+        if len(s.ops) > 1:
+            sfilter.mark_valid(pos)
+
+    # finally, exclude invalid matches
+    processed_matches = [(s, pos, sf) for (s, pos, sf) in processed_matches if sfilter.check(pos)]
 
     return processed_matches
 
