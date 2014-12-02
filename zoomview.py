@@ -156,7 +156,12 @@ class ZoomView(object):
         xsf = self.ws[0] / float(xh - xl)
         ysf = self.ws[1] / float(yh - yl)
 
-        return (self.lines - [xl, yl, xl, yl]) * [xsf, ysf, xsf, ysf]
+        scaled_lines = (self.lines - [xl, yl, xl, yl]) * [xsf, ysf, xsf, ysf]
+
+        # flip vertically as PyGame has y increasing downwards
+        scaled_lines[:, [1, 3]] = self.ws[1] - scaled_lines[:, [1, 3]]
+
+        return scaled_lines
 
     def handle_select(self, ul, lr):
         print ul, lr
