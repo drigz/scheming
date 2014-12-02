@@ -14,6 +14,13 @@ def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
 
 def extract_ops(ops, ul, lr):
+    '''Given a list ops of drawing operations and the coordinates (ul, lr) of a
+    bounding box, return only the operations with coordinates inside the
+    bounding box. Each run of operations outside the bounding box is replaced
+    by the string 'gap'.
+
+    Returns a generator.'''
+
     (ulx, uly) = ul
     (lrx, lry) = lr
     started = stopped = False
@@ -47,6 +54,9 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
     matches = []
 
     def match_op(step1, step2):
+        '''Compare two operations and return True if:
+        - they are the same operation type (ie pen up/pen down)
+        - and they are in the same direction'''
         ((x1, y1), c1) = step1
         ((x2, y2), c2) = step2
         n1 = math.sqrt(x1*x1+y1*y1)
@@ -56,9 +66,12 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
             return False
         if n1 < 0.01 or n2 < 0.01:
             return n1 < 0.01 and n2 < 0.01
-
+ 
+        # match operations (2d vectors) on angle between them
         return (x1*x2+y1*y2)/n1/n2 > tol
-        return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
+
+        # match operations (2d vectors) on absolute difference
+        # return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
 
     # these variables are used to avoid matching a sigil
     # when the previous or next operation continues the line
@@ -97,6 +110,8 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
         is_possible_start = operator == 'm'
 
     # filter overlapping matches
+    ############################
+
     def end_then_start(match):
         _, start, end = match
         return (end, -start)
@@ -110,10 +125,12 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
             deleted.append((s.char, es_char))
             del matches[i]
 
-        #earliest_start = min(start, earliest_start)
         if start < earliest_start:
             earliest_start = start
             es_char = s.char
+
+    # print the frequency of sigils which appear as spurious matches within
+    # other sigils
     from collections import Counter
     for (k,v) in sorted(Counter(deleted).items()):
         print k, v
@@ -121,6 +138,8 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
     processed_matches = []
 
     # determine scale factors and filter matches with inconsistent scales
+    #####################################################################
+
     for s, start, end in matches:
         # walking a tightrope of fenceposts...
         doc_ops = ops[start:end]
@@ -176,6 +195,17 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
     return processed_matches
 
 class OriginView(zoomview.ZoomView):
+    '''Used for testing matched sigils and correction their origins.
+
+    When a region is selected in the window, all matched sigils within the
+    window are identified. They should all be on one horizontal line of text.
+
+    The script corrects the y value of the origin of each sigil so that all
+    origins lie on one line, ie all sigils have their origin y value set to
+    that of the sigil with the minimum origin y value.
+
+    The matched characters and new origin values are also printed.'''
+
     def __init__(self, abs_ops):
         self.og_lines = pdf.line_ops_to_lines(abs_ops)
         zoomview.ZoomView.__init__(self, self.og_lines)
@@ -222,6 +252,12 @@ class OriginView(zoomview.ZoomView):
         print ', '.join('{:.2f}'.format(m[1][1]) for m in sel_matches)
 
 class CaptureView(OriginView):
+    '''Used for the identification and classification of undetected letters.
+
+    When a region of the viewed PDF is selected, the operations within that
+    region are loaded and the user is asked (on the command line) for the
+    character that those operations correspond to.'''
+
     def __init__(self, abs_ops):
         OriginView.__init__(self, abs_ops)
 
