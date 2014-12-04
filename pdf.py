@@ -32,12 +32,14 @@ class SchematicReader(PyPDF2.PdfFileReader):
         page = self.getPage(page_no)
         return ContentStream(page.getContents(), page.pdf)
 
-    def get_initial_ctm(self, page_no):
+    def get_initial_ctm(self, page):
         '''Initialise the current transformation matrix (CTM) by looking at
         the Rotate setting in the page dictionary. This doesn't handle CTM
         changes due to `cm` operations in the content stream.'''
 
-        page = self.getPage(page_no)
+        if isinstance(page, int):
+            page = self.getPage(page)
+
         rotation = page.get('/Rotate', 0)
         [xl, yl, xh, yh] = page.get('/CropBox', page['/MediaBox'])
 
@@ -102,7 +104,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
     def text_to_unwrapped_operations(self, page, text_items):
         font = '/TT2' # TODO: don't hardcode
 
-        yield ([], _('BT')
+        yield ([], 'BT')
 
         # this font size here seems to have no effect, and you
         # have to change the scale factor in the text matrix
@@ -112,31 +114,20 @@ class SchematicReader(PyPDF2.PdfFileReader):
         yield (['/DeviceRGB'], 'CS')
         yield ([255, 0, 0], 'sc')
 
+        itm = numpy.linalg.inv(self.get_initial_ctm(page))
+
         for text, (x, y), scale in text_items:
             # 5 was chosen by trial and error to approximately match
             # size of chars in development doc
-            yield ([0, 5*scale, -5*scale, 0, y, x], 'Tm')
+            raw_vector_homogenous = itm.dot([x, y, 1])
+            raw_vector = list(raw_vector_homogenous[:2])
+
+
+            # TODO (maybe): don't hardcode orientation matrix
+            yield ([0, 5*scale, -5*scale, 0] + raw_vector, 'Tm')
             yield ([text], 'Tj')
 
         yield ([], 'ET')
-
-def homogeneous_inverse(hm):
-    '''Calculates the inverse of a 2D homogeneous matrix:
-
-    [[M, T],  -> [[M^-1, M\T],
-     [0, 1]]  ->  [   0,   1]]'''
-
-    m = hm[:-1, :-1]
-    t = hm[:-1, -1]
-
-    result = numpy.array(hm)
-
-    minv = m.invert()
-
-    result[:-1, :-1] = minv
-    result[:-1, -1] = minv.dot(t)
-
-    return result
 
 def line_ops_to_lines(ops):
     lines = []

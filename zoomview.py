@@ -82,7 +82,7 @@ class ZoomView(object):
 
             elif ev.type == MOUSEMOTION:
                 if moving:
-                    dx, dy = ev.pos[0] - og_pos[0], ev.pos[1] - og_pos[1]
+                    dx, dy = ev.pos[0] - og_pos[0], og_pos[1] - ev.pos[1]
 
                     ((xl, yl), (xh, yh)) = og_view
                     dvx, dvy = dx / float(self.ws[0]) * (xh-xl), dy / float(self.ws[1]) * (yh-yl)
@@ -127,7 +127,7 @@ class ZoomView(object):
         # map pos to doc
         x, y = pix_pos
         xd = xl + x / float(self.ws[0]) * (xh - xl)
-        yd = yl + y / float(self.ws[1]) * (yh - yl)
+        yd = yl + (1 - y / float(self.ws[1])) * (yh - yl)
 
         return (xd, yd)
 
@@ -136,7 +136,7 @@ class ZoomView(object):
         ((xl, yl), (xh, yh)) = self, view
 
         return (self.ws[0] * (x - xl) / float(xh - xl),
-                self.ws[1] * (y - yl) / float(yh - yl))
+                self.ws[1] * (1 - (y - yl) / float(yh - yl)))
 
     def redraw(self, window):
         random.seed(0)
