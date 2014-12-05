@@ -4,6 +4,7 @@ from PyPDF2.pdf import ContentStream
 from PyPDF2.generic import *
 
 import numpy
+import json
 
 class NovelContentStream(ContentStream):
     def __init__(self, pdf):
@@ -11,6 +12,15 @@ class NovelContentStream(ContentStream):
         self.operations = []
 
 class SchematicReader(PyPDF2.PdfFileReader):
+    def __init__(self, *args, **kwargs):
+        super(SchematicReader, self).__init__(*args, **kwargs)
+
+        # TODO: figure out how to convert between CID indices in the font we copy from
+        # font_donor.pdf and real characters.
+        #
+        # For now, I generated this lookup table, but this is such a tragic copout.
+        self.font_map = json.load(open('font_map.json'))
+
     def get_line_ops(self, page_no):
         '''Return a list of line drawing operations on the given page.'''
 
@@ -65,7 +75,42 @@ class SchematicReader(PyPDF2.PdfFileReader):
         else:
             raise NotImplementedError('unhandled rotation: %r' % rotation)
 
-    def add_text(self, page_no, text_items):
+    def add_dummy_font(self):
+        '''Load a font from a dummy donor document and merge it into every page,
+        returning the name of the new font.'''
+
+        # load the donor font
+        rdr = PyPDF2.PdfFileReader(open('font_donor.pdf', 'rb'))
+        donor_page = rdr.getPage(0)
+        donor_resources = donor_page['/Resources'].getObject()
+        donor_fonts = donor_resources['/Font'].values()
+
+        assert len(donor_fonts) == 1
+
+        new_font_name = '/FINJ'
+        new_font_data = donor_fonts[0]
+
+        # add font dictionaries to every page of the target pdf and
+        # collect all existing font names
+        existing_font_names = set()
+        for page in self.pages:
+            resources = page['/Resources'].getObject()
+            if '/Font' in resources:
+                existing_font_names.update(resources['/Font'].keys())
+            else:
+                resources[NameObject('/Font')] = DictionaryObject()
+
+        # generate a unique name for the new font
+        while new_font_name in existing_font_names:
+            new_font_name = new_font_name + 'R'
+
+        # add the new font to every page
+        for page in self.pages:
+            page['/Resources'].getObject()['/Font'][NameObject(new_font_name)] = new_font_data
+
+        return new_font_name
+
+    def add_text(self, page_no, font, text_items):
         '''Adds text, given as a {string: coords} to the given page.'''
 
         page = self.getPage(page_no)
@@ -74,7 +119,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
         newContentsArray.append(ContentStream(page.getContents(), page.pdf))
 
         addedContents = NovelContentStream(page.pdf)
-        addedContents.operations = self.text_to_operations(page, text_items)
+        addedContents.operations = self.text_to_operations(page, font, text_items)
         newContentsArray.append(addedContents)
 
         newContents = ContentStream(newContentsArray, page.pdf).flateEncode()
@@ -85,7 +130,9 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
         def to_pypdf2_object(x):
             '''Convert a Python object to a PyPDF2 object.'''
-            if isinstance(x, str):
+            if isinstance(x, PdfObject):
+                return x
+            elif isinstance(x, str):
                 return TextStringObject(x)
             elif isinstance(x, int):
                 return NumberObject(x)
@@ -101,14 +148,12 @@ class SchematicReader(PyPDF2.PdfFileReader):
         return map(to_operation,
                 self.text_to_unwrapped_operations(*args, **kwargs))
 
-    def text_to_unwrapped_operations(self, page, text_items):
-        font = '/TT2' # TODO: don't hardcode
-
+    def text_to_unwrapped_operations(self, page, font, text_items):
         yield ([], 'BT')
 
         # this font size here seems to have no effect, and you
         # have to change the scale factor in the text matrix
-        yield ([font, 1], 'Tf')
+        yield ([NameObject(font), 1], 'Tf')
 
         # switch to red text
         yield (['/DeviceRGB'], 'CS')
@@ -125,7 +170,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
             # TODO (maybe): don't hardcode orientation matrix
             yield ([0, 5*scale, -5*scale, 0] + raw_vector, 'Tm')
-            yield ([text], 'Tj')
+            yield ([ByteStringObject(self.font_map[text])], 'Tj')
 
         yield ([], 'ET')
 
