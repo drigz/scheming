@@ -106,12 +106,14 @@ class ZoomView(object):
                     selecting = False
                     redraw = True
 
-            elif ev.type == KEYDOWN:
-                if ev.key == K_RETURN:
-                    return
+            elif ev.type == KEYDOWN and ev.key == K_RETURN:
+                return
 
             elif ev.type == pygame.QUIT:
                 return
+
+            else:
+                self.handle_event(ev)
 
 
     def init_view(self):
@@ -165,3 +167,6 @@ class ZoomView(object):
 
     def handle_select(self, ul, lr):
         print ul, lr
+
+    def handle_event(self, ev):
+        return
