@@ -240,9 +240,9 @@ class OriginView(zoomview.ZoomView):
 
             for m in self.matches:
                 if m[0] is sig:
-                    m[1][1] += true_origin_y - false_origin_y
+                    m[1][1] += (true_origin_y - false_origin_y) / scale * m[2]
 
-            self.sigdict[sig.char].origin[1] += true_origin_y - false_origin_y
+            self.sigdict[sig.char].origin[1] += (true_origin_y - false_origin_y) / scale
 
         # reposition match markers
         self.add_matches()
@@ -250,6 +250,11 @@ class OriginView(zoomview.ZoomView):
         print ''.join(m[0].char for m in sel_matches)
         print ', '.join('{:.2f}'.format(m[1][0]) for m in sel_matches)
         print ', '.join('{:.2f}'.format(m[1][1]) for m in sel_matches)
+
+    def handle_event(self, ev):
+        if ev.type == KEYDOWN and ev.key == K_s:
+            print 'Saving scheming.json...'
+            self.sigdict.to_json(open('scheming.json', 'w'))
 
 class CaptureView(OriginView):
     '''Used for the identification and classification of undetected letters.
@@ -270,13 +275,11 @@ class CaptureView(OriginView):
             return
 
         sig = sigil.Sigil.from_abs_ops(selected_ops)
-        sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
         c = raw_input('enter char: ')
-        if c in sigdict:
-            print sig.cmp(sigdict[c])
+        if c in self.sigdict:
+            print sig.cmp(self.sigdict[c])
         else:
-            sigdict[c] = sig
-            sigdict.to_json(open('scheming.json', 'w'))
+            self.sigdict[c] = sig
 
 if __name__ == '__main__':
     if len(sys.argv) != 3 or sys.argv[1] not in ['capture', 'origin']:
