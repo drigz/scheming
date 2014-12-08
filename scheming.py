@@ -55,24 +55,17 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
     matches = []
 
     def match_op(step1, step2):
-        '''Compare two operations and return True if:
-        - they are the same operation type (ie pen up/pen down)
-        - and they are in the same direction'''
+        '''Compare two operations and return True if they are in the same direction.'''
+
         ((x1, y1), c1) = step1
         ((x2, y2), c2) = step2
         n1 = math.sqrt(x1*x1+y1*y1)
         n2 = math.sqrt(x2*x2+y2*y2)
 
-        if c1 != c2:
-            return False
         if n1 < 0.01 or n2 < 0.01:
             return n1 < 0.01 and n2 < 0.01
  
-        # match operations (2d vectors) on angle between them
         return (x1*x2+y1*y2)/n1/n2 > tol
-
-        # match operations (2d vectors) on absolute difference
-        # return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
 
     # wrap in ms to make it easier for the regex to match the divisions between
     # continuous lines
@@ -263,7 +256,7 @@ class CaptureView(OriginView):
             self.sigdict[c] = sig
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] not in ['capture', 'origin']:
+    if len(sys.argv) not in [2,3] or sys.argv[1] not in ['capture', 'origin', 'bench']:
         print 'usage: {} capture|origin schematic.pdf'.format(sys.argv[0])
 
     pdf_file = 'P1318-005a.pdf'
