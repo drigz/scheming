@@ -285,12 +285,24 @@ if __name__ == '__main__':
     if len(sys.argv) != 3 or sys.argv[1] not in ['capture', 'origin']:
         print 'usage: {} capture|origin schematic.pdf'.format(sys.argv[0])
 
-    rdr = pdf.SchematicReader(open(sys.argv[2], 'rb'))
+    pdf_file = 'P1318-005a.pdf'
+    if len(sys.argv) > 2:
+        pdf_file = sys.argv[2]
+
+    rdr = pdf.SchematicReader(open(pdf_file, 'rb'))
     line_ops = rdr.get_line_ops(1)
 
     if sys.argv[1] == 'capture':
         v = CaptureView(line_ops)
+        v.show()
+
     elif sys.argv[1] == 'origin':
         v = OriginView(line_ops)
+        v.show()
 
-    v.show()
+    elif sys.argv[1] == 'bench':
+        sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
+
+        t = time.time()
+        matches = match_sigils(sigdict, line_ops)
+        print 'matched {} symbols in {:.3f} seconds'.format(len(matches), time.time() - t)
