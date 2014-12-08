@@ -4,6 +4,7 @@ from pygame.locals import *
 import time, math, sys
 
 import json
+import re
 
 import random
 
@@ -47,7 +48,7 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
     # ops that are matched.
     options = []
 
-    # loop result: an array of (sigil, origin, start, end)
+    # loop result: an array of (sigil, start, end)
     # where origin is the x,y coords of the sigil origin, and
     # start and end are the indexes of the start & end ops (used to detect
     # overlapping sigils)
@@ -73,41 +74,21 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
         # match operations (2d vectors) on absolute difference
         # return abs(x1-x2) < 0.1 and abs(y1-y2) < 0.1
 
-    # these variables are used to avoid matching a sigil
-    # when the previous or next operation continues the line
-    is_possible_start = is_possible_end = True
+    # wrap in ms to make it easier for the regex to match the divisions between
+    # continuous lines
+    all_opcodes = 'm{}m'.format(''.join(opcode for (_,opcode) in ops))
 
-    for (i, op) in enumerate(ops):
-        operator = op[-1]
+    for sig in sigdict.values():
+        sig_regex = '(?=m{}m)'.format(''.join(opcode for (_,opcode) in sig.ops))
 
-        if i+1 < len(ops):
-            is_possible_end = ops[i+1][-1] == 'm'
-        else:
-            is_possible_end = True
+        possible_starts = [m.start() for m in
+                re.finditer(sig_regex, all_opcodes)]
 
-        # evaluate current options
-        options = [(sig, pos+1) for (sig, pos) in options
-                if match_op(op, sig.ops[pos])]
+        for start in possible_starts:
+            doc_ops = ops[start : start+len(sig.ops)]
 
-        # try starting a new option
-        if is_possible_start:
-            for sig in sigdict.values():
-                if match_op(op, sig.ops[0]):
-                    options.append((sig, 1))
-
-        # detect finished sigs and remove from options
-        new_options = []
-        for sig, pos in options:
-            if pos == len(sig):
-                if is_possible_end:
-                    matches.append((sig, i+1-pos, i+1))
-                # if the sigil couldn't end here, it's spurious, so discard it
-            else:
-                new_options.append((sig, pos))
-        options = new_options
-
-        # for the next iteration
-        is_possible_start = operator == 'm'
+            if all(match_op(doc_op, sig_op) for (doc_op, sig_op) in zip(doc_ops, sig.ops)):
+                matches.append( (sig, start, start+len(sig.ops)) )
 
     # filter overlapping matches
     ############################
