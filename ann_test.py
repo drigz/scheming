@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     font_name = rdr.add_dummy_font()
 
-    for page_no in [1]:#range(len(rdr.pages)):
+    for page_no in [0,1]:#range(len(rdr.pages)):
 
         line_ops = rdr.get_line_ops(page_no)
 
