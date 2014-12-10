@@ -16,6 +16,9 @@ class Sigil(object):
         self.ops = ops
         self.char = char
 
+        x1, x2, _, _ = ops_bb(ops)
+        self.width = x2 - x1
+
     @staticmethod
     def from_abs_ops(ops):
         return Sigil(diff_ops(ops))
@@ -46,6 +49,9 @@ class Sigil(object):
             self.ops[i] = [[x*sf for x in op[0]], op[1]]
 
         self.scale = ops_scale(self.ops)
+
+        x1, x2, _, _ = ops_bb(self.ops)
+        self.width = x2 - x1
 
     def __len__(self):
         return len(self.ops)

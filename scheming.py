@@ -11,6 +11,8 @@ import random
 import zoomview, pdf, sigil
 from spatialfilter import SpatialFilter
 
+from intervaltree import Interval, IntervalTree
+
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
 
@@ -146,56 +148,75 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
             pass
             #print 'scale error:', s.char, scale_error
 
+    matches = processed_matches
+
     # filter out single-operation matches that aren't aligned with characters
     # just beforehand (ie, no underscores, slashes or hyphens at the start of
     # a word)
     #########################################################################
 
-    # sort by increasing x coordinate
-    def x_coord(match):
-        s, (x, y), sf = match
-        return x
+    # estimate font metrics based on V, the widest character
+    v_width = sigdict['V'].width
+    gap_width = v_width / 2.58
+    space_width = gap_width * 2
 
-    deleted = set()
-    processed_matches = list(sorted(processed_matches, key=x_coord))
-    x_coords = [x for s, (x, y), sf in processed_matches]
-    y_coords = [y for s, (x, y), sf in processed_matches]
+    # for each sigil, work out the range of possible starts of the next sigil:
+    #   FROM x + width
+    #   TO   x + width + gap + space + gap + one more gap for tolerance
+    windows = IntervalTree()
+    for i, (s, (x, y), sf) in enumerate(matches):
+        windows.addi(
+                x + sf * s.width,
+                x + sf * (s.width + 3 * gap_width + space_width),
+                (i, y))
 
-    # now loop through, keeping a pointer to the first sigil <max_x_sep away
-    max_x_sep = 10 # TODO: don't hardcode this
-    max_y_sep = 0.1
-    trailing_idx = 0
-    for (i, (s, (x, y), sf)) in enumerate(processed_matches):
+    # work out which matches are not spurious (because they are > 1 op)
+    # and which are aligned with a previous match
+    legit_indices = set()
+    aligned_with = dict()
+
+    max_y_sep = 0.7
+    for i, (s, (x, y), sf) in enumerate(matches):
 
         # only delete single-operation matches as these are most prone to
         # spurious matches
         if len(s.ops) > 1:
+            legit_indices.add(i)
             continue
 
-        # work out the first sigil <max_x_sep away
-        while trailing_idx < len(processed_matches) and \
-                x_coords[trailing_idx] < x - max_x_sep:
-            trailing_idx += 1
-
-        # test how well aligned the current match is with matches <max_x_sep
-        # away
-        for j in range(trailing_idx, i):
-            if j in deleted:
-                continue
-
-            if abs(y - processed_matches[j][1][1]) < max_y_sep:
+        # check all windows containing x
+        for window in windows[x]:
+            (window_i, window_y) = window.data
+            if abs(y - window_y) < max_y_sep:
+                aligned_with[i] = window_i
                 break
 
+    # now: extend it. if a match is aligned with a legit match, it's legit.
+    deleted = set()
+
+    def check_is_legit(i):
+        if i in legit_indices:
+            return True
+        if i in deleted or i not in aligned_with:
+            return False
+
+        result = check_is_legit(aligned_with[i])
+
+        if result:
+            legit_indices.add(i)
         else:
             deleted.add(i)
 
-    print 'deleting', Counter(processed_matches[i][0].char for i in deleted)
+        return result
+
+    print 'deleting', Counter(s.char for i, (s, pos, sf) in
+            enumerate(matches) if not check_is_legit(i))
 
     # finally, exclude invalid matches
-    processed_matches = [(s, pos, sf) for (i, (s, pos, sf)) in
-            enumerate(processed_matches) if i not in deleted]
+    matches = [m for i, m in
+            enumerate(matches) if check_is_legit(i)]
 
-    return processed_matches
+    return matches
 
 class OriginView(zoomview.ZoomView):
     '''Used for testing matched sigils and correction their origins.
@@ -230,7 +251,7 @@ class OriginView(zoomview.ZoomView):
 
         sel_matches = []
         true_origin_y = 99999999999
-        for (sig, (ox, oy), scale) in self.matches:
+        for i, (sig, (ox, oy), scale) in enumerate(self.matches):
             if ulx <= ox <= lrx and uly <= oy <= lry:
                 sel_matches.append( (sig, (ox, oy), scale) )
                 true_origin_y = min(true_origin_y, oy)
@@ -251,8 +272,8 @@ class OriginView(zoomview.ZoomView):
         self.add_matches()
 
         print ''.join(m[0].char for m in sel_matches)
-        print ', '.join('{:.2f}'.format(m[1][0]) for m in sel_matches)
-        print ', '.join('{:.2f}'.format(m[1][1]) for m in sel_matches)
+        print 'x:    ', ', '.join('{:6.2f}'.format(m[1][0]) for m in sel_matches)
+        print 'y:    ', ', '.join('{:6.2f}'.format(m[1][1]) for m in sel_matches)
 
     def handle_event(self, ev):
         if ev.type == KEYDOWN and ev.key == K_s:
