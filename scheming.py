@@ -92,16 +92,16 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
 
     deleted = []
     matches = list(sorted(matches, key=end_then_start))
-    earliest_start = matches[-1][-1]
-    es_char = ''
-    for (i, (s, start, _)) in reversed(list(enumerate(matches))):
-        if start >= earliest_start:
-            deleted.append((s.char, es_char))
+    overlapper_sig, overlapper_start, overlapper_end = matches[-1]
+    for (i, (s, start, end)) in reversed(list(enumerate(matches))):
+        if start > overlapper_start or \
+                (start == overlapper_start and end < overlapper_end):
+            deleted.append((s.char, overlapper_sig.char))
             del matches[i]
 
-        if start < earliest_start:
-            earliest_start = start
-            es_char = s.char
+        if start < overlapper_start:
+            overlapper_start, overlapper_end = start, end
+            overlapper_sig = s
 
     # print the frequency of sigils which appear as spurious matches within
     # other sigils
@@ -146,25 +146,54 @@ def match_sigils(sigdict, abs_ops, tol=0.93):
             pass
             #print 'scale error:', s.char, scale_error
 
-    # filter out single-operation matches far from other letters
-    ############################################################
+    # filter out single-operation matches that aren't aligned with characters
+    # just beforehand (ie, no underscores, slashes or hyphens at the start of
+    # a word)
+    #########################################################################
 
-    # return early if there are no multi-operation letters
-    if not any(len(s.ops) > 1 for (s, _, sf) in processed_matches):
-        return []
+    # sort by increasing x coordinate
+    def x_coord(match):
+        s, (x, y), sf = match
+        return x
 
-    # first, set the block size to max letter height
-    max_height = max(sf*sigil.ops_height(s.ops)
-            for (s, _, sf) in processed_matches if len(s.ops) > 1)
-    sfilter = SpatialFilter(max_height)
+    deleted = set()
+    processed_matches = list(sorted(processed_matches, key=x_coord))
+    x_coords = [x for s, (x, y), sf in processed_matches]
+    y_coords = [y for s, (x, y), sf in processed_matches]
 
-    # then allow regions around letters
-    for s, pos, _ in processed_matches:
+    # now loop through, keeping a pointer to the first sigil <max_x_sep away
+    max_x_sep = 10 # TODO: don't hardcode this
+    max_y_sep = 0.1
+    trailing_idx = 0
+    for (i, (s, (x, y), sf)) in enumerate(processed_matches):
+
+        # only delete single-operation matches as these are most prone to
+        # spurious matches
         if len(s.ops) > 1:
-            sfilter.mark_valid(pos)
+            continue
+
+        # work out the first sigil <max_x_sep away
+        while trailing_idx < len(processed_matches) and \
+                x_coords[trailing_idx] < x - max_x_sep:
+            trailing_idx += 1
+
+        # test how well aligned the current match is with matches <max_x_sep
+        # away
+        for j in range(trailing_idx, i):
+            if j in deleted:
+                continue
+
+            if abs(y - processed_matches[j][1][1]) < max_y_sep:
+                break
+
+        else:
+            deleted.add(i)
+
+    print 'deleting', Counter(processed_matches[i][0].char for i in deleted)
 
     # finally, exclude invalid matches
-    processed_matches = [(s, pos, sf) for (s, pos, sf) in processed_matches if sfilter.check(pos)]
+    processed_matches = [(s, pos, sf) for (i, (s, pos, sf)) in
+            enumerate(processed_matches) if i not in deleted]
 
     return processed_matches
 
