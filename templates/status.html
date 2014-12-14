@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="row">
+    <div class="col-md-8 col-md-offset-2">
+        {% if state == State.New %}
+            <p class="lead">
+            You are currently in a queue.
+            </p>
+            <p>
+            Your PDF is very important to us, and will be dealt with as soon as possible.
+            </p>
+        {% elif state == State.Working %}
+            <p class="lead">
+            We're analysing your PDF right now.
+            </p>
+            <p>
+            You see before you a progress bar, randomly moving forward in jumps
+            and starts. You suspect that it has no relevance to the event that
+            you are waiting for, but it is soothing nonetheless.
+            </p>
+            <p>
+            It appears that it will reach its terminus in a few seconds for a
+            short PDF, or several minutes for a larger PDF.
+            </p>
+        {% elif state == State.Failed %}
+            <p class="lead">
+            I'm sorry&mdash;I've failed you.
+            </p>
+            <p>
+            Something about this PDF has defeated me. Please drop
+            <a href="mailto:rodrigo.queiro@cambridgeconsultants.com">my creator</a>
+            an email to let him know, and he'll be in touch if and when he's
+            fixed the bug.
+            </p>
+            <p>
+            Please feel free to <a href="{{ url_for('upload_file') }}">try again</a>
+            with another less deviant document.
+            </p>
+        {% elif state == State.Succeeded %}
+            <p class="lead">
+            Voila!
+            </p>
+            <p>
+            Check out
+            <a href="{{ url_for('result', id=id) }}">the results</a>
+            and let
+            <a href="mailto:rodrigo.queiro@cambridgeconsultants.com">my creator</a>
+            know what you think. If you're happy with this, feel free to
+            <a href="{{ url_for('upload_file') }}">have another go</a>.
+            </p>
+        {% elif state == State.Deleted %}
+            <p class="lead">
+            This document has self-destructed.
+            </p>
+            <p>
+            For security reasons, this document has been deleted. If you need
+            to, please
+            <a href="{{ url_for('upload_file') }}">upload it again</a>.
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
