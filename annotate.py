@@ -2,8 +2,8 @@ import PyPDF2
 import pdf, scheming, sigil
 from collections import Counter
 
-if __name__ == '__main__':
-    rdr = pdf.SchematicReader(open('P1318-005a.pdf', 'rb'))
+def annotate(input_filename, output_filename):
+    rdr = pdf.SchematicReader(open(input_filename, 'rb'))
     sigdict = sigil.SigilDict.from_json(open('scheming.json'))
 
     font_name = rdr.add_dummy_font()
@@ -21,4 +21,7 @@ if __name__ == '__main__':
     for p in rdr.pages:
         wtr.addPage(p)
 
-    wtr.write(open('modified.pdf', 'wb'))
+    wtr.write(open(output_filename, 'wb'))
+
+if __name__ == '__main__':
+    annotate('P1318-005a.pdf', 'modified.pdf')
