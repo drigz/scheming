@@ -2,6 +2,10 @@
 {% block body %}
 <div class="row">
     <div class="col-md-8 col-md-offset-2">
+        {% if state == State.New or state == State.Working %}
+            <script src="{{ url_for('static', filename='autorefresh.js') }}"></script>
+        {% endif %}
+
         {% if state == State.New %}
             <p class="lead">
             You are currently in a queue.
