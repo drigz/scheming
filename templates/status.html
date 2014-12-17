@@ -52,6 +52,12 @@
             know what you think. If you're happy with this, feel free to
             <a href="{{ url_for('upload_file') }}">have another go</a>.
             </p>
+            <p>
+            You can <a href="javascript: document.forms['deleteForm'].submit();">delete</a> my
+            copy to make sure it doesn't end up anywhere it shouldn't.
+            </p>
+            <form name="deleteForm" action="{{ url_for('delete', id=id) }}" method="post">
+            </form>
         {% elif state == State.Deleted %}
             <p class="lead">
             This document has self-destructed.

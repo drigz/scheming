@@ -119,8 +119,6 @@ def status(id):
     if len(states) == 0:
         abort(404)
 
-    print states
-
     return render_template('status.html',
             title='Searchable Schematics',
             id=id, state=states[0][0], State=State)
@@ -142,6 +140,40 @@ def result(id):
     return send_from_directory(
             app.config['RESULT_FOLDER'], id + '.pdf',
             as_attachment=True, attachment_filename=original_filename)
+
+@app.route('/delete/<id>', methods=['POST'])
+def delete(id):
+
+    db = get_db()
+    cur = db.execute('select state from uploaded where id = ?', [id])
+    rows = cur.fetchall()
+
+    if len(rows) == 0:
+        abort(404)
+
+    state = rows[0][0]
+
+    if state == State.Succeeded:
+        secure_delete(os.path.join(app.config['UPLOAD_FOLDER'], id + '.pdf'))
+        secure_delete(os.path.join(app.config['RESULT_FOLDER'], id + '.pdf'))
+
+        db.execute('update uploaded set state = ? where id = ?', [State.Deleted, id])
+        db.commit()
+
+    return redirect(url_for('status', id=id))
+
+def secure_delete(path):
+    '''Overwrite a file with zeros before deleting it.'''
+
+    size = os.stat(path).st_size
+
+    f = open(path, 'w')
+    f.write('\0' * size)
+    f.flush()
+    os.fsync(f.fileno())
+    f.close()
+
+    os.remove(path)
 
 if __name__ == '__main__':
     app.run()
