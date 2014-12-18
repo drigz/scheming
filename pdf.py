@@ -28,10 +28,24 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
         ctm = self.get_initial_ctm(page_no)
 
+        ctm_stack = []
+
         line_ops = []
 
         for op in contents.operations:
-            if op[1] in 'ml':
+            if op[1] == 'q':
+                ctm_stack.append(ctm)
+
+            elif op[1] == 'Q':
+                ctm = ctm_stack.pop()
+
+            elif op[1] == 'cm':
+                a,b,c,d,e,f = map(float, op[0])
+                ctm = ctm.dot(numpy.array([[ a,  c, e],
+                                           [ b,  d, f],
+                                           [ 0,  0, 1]]))
+
+            elif op[1] in 'ml':
                 coords = ctm.dot(map(float, op[0]) + [1])
                 line_ops.append(((coords[0], coords[1]), op[1]))
 
