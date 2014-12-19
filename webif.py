@@ -71,44 +71,8 @@ def upload_file():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], id+'.pdf'))
             return redirect(url_for('status', id=id))
 
-    return header('Searchable Schematics') + '''
-    <form role="form" action="" method="post" enctype="multipart/form-data">
-        <div class="form-group">
-            <div class="row">
-                <div class="col-md-8 col-md-offset-2">
-                    <p class="lead">
-                        Want to be able to search for text within a schematic
-                        PDF?
-                    </p>
-                    <p>
-                        Just upload it with the form below and I can work out
-                        what all the text says, then modify the document with
-                        invisible text that your PDF reader can search for.
-                        Think of all the time you'll save!
-                    </p>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 col-md-offset-2">
-                    <input type="file" class="filestyle" name="file" data-buttonName="btn-primary">
-                </div>
-                <div class="col-md-2">
-                    <input type="submit" class="btn btn-primary btn-block" value="Upload">
-                </div>
-            </div>
-            <div class="row" style="margin-top: 60px">
-                <div class="col-md-8 col-md-offset-2">
-                    <p>
-                        If you run into any problems, drop an email to <a
-                        href="mailto:rodrigo.queiro@cambridgeconsultants.com">Rodrigo
-                        Queiro</a> with the PDF in question and description of
-                        the problem, and he'll see what he can do.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </form>
-    '''
+    return render_template('index.html',
+            title='Searchable Schematics')
 
 @app.route('/status/<id>')
 def status(id):
