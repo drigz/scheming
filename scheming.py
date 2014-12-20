@@ -131,7 +131,7 @@ if __name__ == '__main__':
         pdf_file = sys.argv[2]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--page', '-p', nargs='?', default=0,
+    parser.add_argument('--page', '-p', nargs='?', default=0, type=int,
             help="page to process [default: 0]")
     parser.add_argument('mode',
             help='operation mode: capture, origin or bench')
