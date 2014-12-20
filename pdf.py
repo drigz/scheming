@@ -1,6 +1,6 @@
 import PyPDF2
 
-from PyPDF2.pdf import ContentStream
+from PyPDF2.pdf import ContentStream, PageObject
 from PyPDF2.generic import *
 
 import numpy
@@ -130,7 +130,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
         page = self.getPage(page_no)
 
         newContentsArray = ArrayObject()
-        newContentsArray.append(ContentStream(page.getContents(), page.pdf))
+        newContentsArray.append(PageObject._pushPopGS(page.getContents(), page.pdf))
 
         addedContents = NovelContentStream(page.pdf)
         addedContents.operations = self.text_to_operations(page, font, text_items)
