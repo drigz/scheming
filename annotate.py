@@ -2,13 +2,18 @@ import PyPDF2
 import pdf, scheming, sigil
 from collections import Counter
 
-def annotate(input_filename, output_filename):
+import argparse
+
+def annotate(input_filename, output_filename, pages=None):
     rdr = pdf.SchematicReader(open(input_filename, 'rb'))
     sigdict = sigil.SigilDict.from_json(open('scheming.json'))
 
     font_name = rdr.add_dummy_font()
 
-    for page_no in [0,1]:#range(len(rdr.pages)):
+    if pages is None:
+        pages = range(len(rdr.pages))
+
+    for page_no in pages:
 
         line_ops = rdr.get_line_ops(page_no)
 
@@ -24,4 +29,16 @@ def annotate(input_filename, output_filename):
     wtr.write(open(output_filename, 'wb'))
 
 if __name__ == '__main__':
-    annotate('P1318-005a.pdf', 'modified.pdf')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pages', '-p', nargs='?',
+            help="comma-separated list of pages to process [default: all]")
+    parser.add_argument('input', nargs='?', default='P1318-005a.pdf',
+            help='path to input PDF  [default: P1318-005a.pdf]')
+    parser.add_argument('output', nargs='?', default='modified.pdf',
+            help='path to output PDF [default: modified.pdf]')
+    args = parser.parse_args()
+
+    if args.pages is not None:
+        args.pages = map(int, args.pages.split(','))
+
+    annotate(args.input, args.output, pages=args.pages)

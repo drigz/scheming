@@ -2,6 +2,7 @@ import pygame
 from pygame.locals import *
 
 import time, math, sys
+import argparse
 
 import json
 
@@ -125,25 +126,31 @@ class CaptureView(OriginView):
             self.sigdict[c] = sig
 
 if __name__ == '__main__':
-    if len(sys.argv) not in [2,3] or sys.argv[1] not in ['capture', 'origin', 'bench']:
-        print 'usage: {} capture|origin schematic.pdf'.format(sys.argv[0])
-
     pdf_file = 'P1318-005a.pdf'
     if len(sys.argv) > 2:
         pdf_file = sys.argv[2]
 
-    rdr = pdf.SchematicReader(open(pdf_file, 'rb'))
-    line_ops = rdr.get_line_ops(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--page', '-p', nargs='?', default=0,
+            help="page to process [default: 0]")
+    parser.add_argument('mode',
+            help='operation mode: capture, origin or bench')
+    parser.add_argument('input', nargs='?', default='P1318-005a.pdf',
+            help='path to input PDF [default: P1318-005a.pdf]')
+    args = parser.parse_args()
 
-    if sys.argv[1] == 'capture':
+    rdr = pdf.SchematicReader(open(args.input, 'rb'))
+    line_ops = rdr.get_line_ops(args.page)
+
+    if args.mode == 'capture':
         v = CaptureView(line_ops)
         v.show()
 
-    elif sys.argv[1] == 'origin':
+    elif args.mode == 'origin':
         v = OriginView(line_ops)
         v.show()
 
-    elif sys.argv[1] == 'bench':
+    elif args.mode == 'bench':
         sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
 
         t = time.time()
