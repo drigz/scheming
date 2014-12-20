@@ -170,8 +170,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
         yield ([NameObject(font), 1], 'Tf')
 
         # switch to red text
-        yield (['/DeviceRGB'], 'CS')
-        yield ([255, 0, 0], 'sc')
+        yield ([1, 0, 0], 'rg')
 
         itm = numpy.linalg.inv(self.get_initial_ctm(page))
 
