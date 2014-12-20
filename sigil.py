@@ -66,10 +66,18 @@ class Sigil(object):
 class SigilDict(dict):
     @staticmethod
     def from_json(json_file):
-        return SigilDict((k, Sigil(char=str(k), **v)) for (k, v) in json.load(json_file).items())
+        result = SigilDict()
+
+        for k, v in json.load(json_file).items():
+            if isinstance(v, dict):
+                v = [v]
+
+            result[k] = [Sigil(char=str(k), **params) for params in v]
+
+        return result
 
     def to_json(self, json_file):
-        json.dump({k: v.to_dict() for (k, v) in self.items()}, json_file)
+        json.dump({k: [s.to_dict() for s in v] for (k, v) in self.items()}, json_file)
 
 def diff_ops(ops):
     '''Convert a list of absolute ops (eg from a PDF) to differential ops,
@@ -102,11 +110,11 @@ def ops_bb(ops):
 
 def ops_origin(ops):
     '''Given a differential ops list, estimate the origin, as a vector from
-    the initial position. The origin is the (min x)-(max y) corner of the
+    the initial position. The origin is the (min x)-(min y) corner of the
     bounding box.'''
 
-    min_x, _, _, max_y = ops_bb(ops)
-    return (min_x, max_y)
+    min_x, _, min_y, _ = ops_bb(ops)
+    return (min_x, min_y)
 
 def ops_height(ops):
     '''Given a differential ops list, determine the height of the bounding

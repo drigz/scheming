@@ -39,6 +39,14 @@ class SchematicReader(PyPDF2.PdfFileReader):
             elif op[1] == 'Q':
                 ctm = ctm_stack.pop()
 
+            elif op[1] == 'c':
+                coords1 = ctm.dot(map(float, op[0][0:2]) + [1])
+                coords2 = ctm.dot(map(float, op[0][2:4]) + [1])
+                coords3 = ctm.dot(map(float, op[0][4:6]) + [1])
+                line_ops.append(((coords1[0], coords1[1]), op[1]))
+                line_ops.append(((coords2[0], coords2[1]), op[1]))
+                line_ops.append(((coords3[0], coords3[1]), op[1]))
+
             elif op[1] == 'cm':
                 a,b,c,d,e,f = map(float, op[0])
                 ctm = ctm.dot(numpy.array([[ a,  c, e],
@@ -197,7 +205,7 @@ def line_ops_to_lines(ops):
         if c == 'm':
             pass
 
-        elif c == 'l':
+        elif c == 'l' or c == 'c':
             lines.append(pos + next_pos)
 
         pos = next_pos

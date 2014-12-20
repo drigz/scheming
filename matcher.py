@@ -35,7 +35,7 @@ def match_without_scale(sigdict, ops):
     # continuous lines
     all_opcodes = 'm{}m'.format(''.join(opcode for (_,opcode) in ops))
 
-    for sig in sigdict.values():
+    for sig in sum(sigdict.values(), []):
 
         # first find all places where the correct sequence of operation types is present
         sig_regex = '(?=m{}m)'.format(''.join(opcode for (_,opcode) in sig.ops))
@@ -151,7 +151,7 @@ def check_alignment(sigdict, matches):
     and underscores.'''
 
     # estimate font metrics based on V, the widest character
-    v_width = sigdict['V'].width
+    v_width = sigdict['V'][0].width
     gap_width = v_width / 2.58  # gap between adjacent characters
     space_width = gap_width * 2 # the width of a space character
 

@@ -86,7 +86,7 @@ class OriginView(zoomview.ZoomView):
                 if m[0] is sig:
                     m[1][1] += (true_origin_y - false_origin_y) / scale * m[2]
 
-            self.sigdict[sig.char].origin[1] += (true_origin_y - false_origin_y) / scale
+            sig.origin[1] += (true_origin_y - false_origin_y) / scale
 
         # reposition match markers
         self.add_matches()
@@ -113,6 +113,9 @@ class CaptureView(OriginView):
         self.abs_ops = abs_ops
 
     def handle_select(self, ul, lr):
+        (ulx, uly) = ul
+        (lrx, lry) = lr
+
         selected_ops = list(extract_ops(self.abs_ops, ul, lr))
         if 'gap' in selected_ops:
             print 'gap in selected ops'
@@ -121,9 +124,16 @@ class CaptureView(OriginView):
         sig = sigil.Sigil.from_abs_ops(selected_ops)
         c = raw_input('enter char: ')
         if c in self.sigdict:
-            print sig.cmp(self.sigdict[c])
+            for captured_sig in self.sigdict[c]:
+                print sig.cmp(captured_sig)
+
+            if any(ulx <= ox <= lrx and uly <= oy <= lry for (_, (ox, oy), _) in self.matches):
+                print 'matches an existing sigil'
+            else:
+                print 'appending to existing sigils'
+                self.sigdict[c].append(sig)
         else:
-            self.sigdict[c] = sig
+            self.sigdict[c] = [sig]
 
 if __name__ == '__main__':
     pdf_file = 'P1318-005a.pdf'
