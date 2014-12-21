@@ -112,6 +112,8 @@ class CaptureView(OriginView):
 
         self.abs_ops = abs_ops
 
+        self.capturing_sigil = False
+
     def handle_select(self, ul, lr):
         (ulx, uly) = ul
         (lrx, lry) = lr
@@ -121,19 +123,28 @@ class CaptureView(OriginView):
             print 'gap in selected ops'
             return
 
-        sig = sigil.Sigil.from_abs_ops(selected_ops)
-        c = raw_input('enter char: ')
-        if c in self.sigdict:
-            for captured_sig in self.sigdict[c]:
-                print sig.cmp(captured_sig)
+        self.capturing_sigil = True
+        self.new_sigil = sigil.Sigil.from_abs_ops(selected_ops)
+        print 'enter char...'
 
-            if any(ulx <= ox <= lrx and uly <= oy <= lry for (_, (ox, oy), _) in self.matches):
-                print 'matches an existing sigil'
+    def handle_event(self, ev):
+        if self.capturing_sigil:
+            c = ev.unicode.encode('utf-8')
+
+            if len(c) != 1:
+                # modifier key/click or non-ascii character
+                return
+
+            print 'char:', repr(c)
+            if c in self.sigdict:
+                self.sigdict[c].append(self.new_sigil)
             else:
-                print 'appending to existing sigils'
-                self.sigdict[c].append(sig)
+                self.sigdict[c] = [self.new_sigil]
+
+            self.capturing_sigil = False
+
         else:
-            self.sigdict[c] = [sig]
+            super(CaptureView, self).handle_event(ev)
 
 if __name__ == '__main__':
     pdf_file = 'P1318-005a.pdf'
