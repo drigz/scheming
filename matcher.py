@@ -9,16 +9,22 @@ from collections import Counter
 
 import sigil
 
-def match_sigils(sigdict, abs_ops):
+def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
     if len(abs_ops) < 2:
         return []
 
     ops = sigil.diff_ops(abs_ops)
 
     matches = match_without_scale(sigdict, ops)
+
+    if len(matches) == 0:
+        return []
+
     matches = remove_submatches(matches)
     matches = check_scales(matches, abs_ops, ops)
-    matches = check_alignment(sigdict, matches)
+
+    if not skip_alignment_check:
+        matches = check_alignment(sigdict, matches)
 
     return matches
 

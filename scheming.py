@@ -50,12 +50,12 @@ class OriginView(zoomview.ZoomView):
 
     The matched characters and new origin values are also printed.'''
 
-    def __init__(self, abs_ops):
+    def __init__(self, abs_ops, skip_alignment_check=True):
         self.og_lines = pdf.line_ops_to_lines(abs_ops)
         zoomview.ZoomView.__init__(self, self.og_lines)
 
         self.sigdict = sigil.SigilDict.from_json(open('scheming.json', 'r'))
-        self.matches = match_sigils(self.sigdict, abs_ops)
+        self.matches = match_sigils(self.sigdict, abs_ops, skip_alignment_check=skip_alignment_check)
 
         self.add_matches()
 
@@ -108,7 +108,7 @@ class CaptureView(OriginView):
     character that those operations correspond to.'''
 
     def __init__(self, abs_ops):
-        OriginView.__init__(self, abs_ops)
+        OriginView.__init__(self, abs_ops, skip_alignment_check=False)
 
         self.abs_ops = abs_ops
 
