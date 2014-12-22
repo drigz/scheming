@@ -15,6 +15,12 @@ class Match(object):
         self.start = start
         self.end = start + len(sig.ops)
 
+    def __iter__(self):
+        if hasattr(self, 'origin'):
+            return iter( (self.sig, self.origin, self.sf) )
+        else:
+            return iter( (self.sig, self.start, self.end) )
+
 def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
     if len(abs_ops) < 2:
         return []
@@ -34,7 +40,7 @@ def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
 
         print count_ambiguous(matches)
 
-    return [(m.sig, m.origin, m.sf) for m in matches]
+    return matches
 
 def match_without_scale(sigdict, ops):
     '''Find all possible matches based only on the directions of each line.
