@@ -8,9 +8,11 @@ import json
 
 import random
 
+import numpy
+
 import zoomview, pdf, sigil
 
-from matcher import match_sigils
+from matcher import match_sigils, count_ambiguous
 
 def gencol():
     return tuple(random.randint(0, 255) for _ in range(3))
@@ -59,10 +61,13 @@ class OriginView(zoomview.ZoomView):
 
         self.add_matches()
 
+        self.removing_match = False
+
     def add_matches(self):
+        origins = [m.origin for m in self.matches]
         lines = self.og_lines + \
-                [(ox-1, oy-1, ox+1, oy+1) for (sig, (ox, oy), _) in self.matches] + \
-                [(ox+1, oy-1, ox-1, oy+1) for (sig, (ox, oy), _) in self.matches]
+                [(ox-1, oy-1, ox+1, oy+1) for (ox, oy) in origins] + \
+                [(ox+1, oy-1, ox-1, oy+1) for (ox, oy) in origins]
         self.set_lines(lines)
 
     def handle_select(self, ul, lr):
@@ -70,33 +75,62 @@ class OriginView(zoomview.ZoomView):
         (lrx, lry) = lr
 
         sel_matches = []
-        true_origin_y = 99999999999
-        for i, (sig, (ox, oy), scale) in enumerate(self.matches):
-            if ulx <= ox <= lrx and uly <= oy <= lry:
-                sel_matches.append( (sig, (ox, oy), scale) )
-                true_origin_y = min(true_origin_y, oy)
+        for i, m in enumerate(self.matches):
+            if ulx <= m.origin[0] <= lrx and uly <= m.origin[1] <= lry:
+                sel_matches.append( (i, m) )
 
-        applied = set()
-        for (sig, (_, false_origin_y), scale) in sel_matches:
-            if sig.char in applied:
+        if len(sel_matches) <= 3:
+            # for few matches, we delete one
+            print 'which match do you want to delete? options:'
+            print ', '.join(repr(m.sig.char) for (i, m) in sel_matches)
+
+            self.sel_matches = sel_matches
+            self.removing_match = True
+            return
+
+        ambi = count_ambiguous(sel_matches)
+        if len(ambi) > 0:
+            print 'there are still ambiguous matches:', ambi
+            print 'delete them before correcting origins'
+            return
+
+        # otherwise perform origin correction
+        true_origin_y = numpy.median(numpy.array([m.origin[1] for (i, m) in sel_matches]))
+
+        applied = []
+        for i, m in sel_matches:
+            false_origin_y = m.origin[1]
+
+            if any(m.sig is s for s in applied):
                 continue
-            applied.add(sig.char)
+            applied.append(m.sig)
 
-            for m in self.matches:
-                if m[0] is sig:
-                    m[1][1] += (true_origin_y - false_origin_y) / scale * m[2]
+            for m2 in self.matches:
+                if m2.sig is m.sig:
+                    m2.origin[1] += (true_origin_y - false_origin_y) / m.sf * m2.sf
 
-            sig.origin[1] += (true_origin_y - false_origin_y) / scale
+            m.sig.origin[1] += (true_origin_y - false_origin_y) / m.sf
 
         # reposition match markers
         self.add_matches()
 
-        print ''.join(m[0].char for m in sel_matches)
-        print 'x:    ', ', '.join('{:6.2f}'.format(m[1][0]) for m in sel_matches)
-        print 'y:    ', ', '.join('{:6.2f}'.format(m[1][1]) for m in sel_matches)
+        import string
+        print string.printable[:-6]
+        print ''.join(m.sig.char for (i, m) in sorted(sel_matches, key=lambda x: x[1].origin[0]))
+        print 'x:    ', ', '.join('{:6.2f}'.format(m.origin[0]) for (i, m) in sel_matches)
+        print 'y:    ', ', '.join('{:6.2f}'.format(m.origin[1]) for (i, m) in sel_matches)
 
     def handle_event(self, ev):
-        if ev.type == KEYDOWN and ev.key == K_s:
+        if self.removing_match:
+            if hasattr(ev, 'unicode') and len(ev.unicode) == 1:
+                rem_matches = [(i, m) for (i, m) in self.sel_matches if m.sig.char == ev.unicode.encode('utf-8')]
+                if len(rem_matches) != 1:
+                    print 'incorrect number of matches:', repr([m.sig.char for (i, m) in rem_matches])
+                del self.matches[rem_matches[0][0]]
+                self.add_matches()
+                self.removing_match = False
+
+        elif ev.type == KEYDOWN and ev.key == K_s:
             print 'Saving scheming.json...'
             self.sigdict.to_json(open('scheming.json', 'w'))
 
