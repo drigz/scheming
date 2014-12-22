@@ -186,9 +186,9 @@ class SchematicReader(PyPDF2.PdfFileReader):
             raw_vector_homogenous = itm.dot([x, y, 1])
             raw_vector = list(raw_vector_homogenous[:2])
 
-            # 5 was chosen by trial and error to approximately match
+            # 15 was chosen by trial and error to approximately match
             # size of chars in development doc
-            raw_orientation = itm * 5 * scale
+            raw_orientation = itm * 15 * scale
 
             # arrange matrix coefficients into correct order for Tm parameters
             text_params = list(raw_orientation[[0, 1, 0, 1], [0, 0, 1, 1]]) + raw_vector
