@@ -77,7 +77,8 @@ class SigilDict(dict):
         return result
 
     def to_json(self, json_file):
-        json.dump({k: [s.to_dict() for s in v] for (k, v) in self.items()}, json_file)
+        json.dump({k: [s.to_dict() for s in v] for (k, v) in self.items()},
+                json_file, sort_keys=True, indent=4)
 
 def diff_ops(ops):
     '''Convert a list of absolute ops (eg from a PDF) to differential ops,
