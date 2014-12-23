@@ -1,7 +1,8 @@
 import json
+import numpy
 
 class Sigil(object):
-    def __init__(self, ops, origin=None, char=None):
+    def __init__(self, ops, origin=None, char=None, angle=0):
         '''Given a list of differential ops, and an optional origin, create a
         Sigil instance. If origin is omitted, it is estimated with ops_origin.
 
@@ -16,6 +17,8 @@ class Sigil(object):
         self.ops = ops
         self.char = char
 
+        self.angle = angle
+
         x1, x2, _, _ = ops_bb(ops)
         self.width = x2 - x1
 
@@ -28,6 +31,23 @@ class Sigil(object):
                 'origin': self.origin,
                 'ops': self.ops,
                 }
+
+    def rotated(self, angle=-90):
+        '''Return a copy of the sigil rotated clockwise by the given angle.'''
+
+        angle = angle * numpy.pi / 180.0
+
+        matrix = numpy.array([[ numpy.cos(angle), numpy.sin(angle)],
+                              [-numpy.sin(angle), numpy.cos(angle)]])
+
+        trans_ops = [(list(matrix.dot(coords)), operator)
+                for (coords, operator) in self.ops]
+        trans_origin = list(matrix.dot(self.origin))
+
+        return Sigil(ops=trans_ops,
+                origin=trans_origin,
+                char=self.char,
+                angle=self.angle + angle)
 
     def cmp(self, other):
         if len(self.ops) != len(other.ops):
