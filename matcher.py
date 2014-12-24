@@ -138,8 +138,8 @@ def check_scales(matches, abs_ops, ops):
                 assert sig_n < 0.01 and doc_n < 0.01, "match_op() isn't doing its job"
 
             else:
-                sf_error = doc_n / sig_n / doc_sf
-                if sf_error < 0.7 or sf_error > 1.3:
+                len_error = abs(doc_n - sig_n * doc_sf)
+                if len_error > 0.2:
                     scale_error = True
 
         # get absolute position of sig origin
