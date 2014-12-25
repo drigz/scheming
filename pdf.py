@@ -182,7 +182,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
         itm = numpy.linalg.inv(self.get_initial_ctm(page))
 
-        for text, (x, y), scale in text_items:
+        for sig, (x, y), scale in text_items:
             raw_vector_homogenous = itm.dot([x, y, 1])
             raw_vector = list(raw_vector_homogenous[:2])
 
@@ -190,11 +190,17 @@ class SchematicReader(PyPDF2.PdfFileReader):
             # size of chars in development doc
             raw_orientation = itm * 15 * scale
 
+            # hardcoded rotation of rotated text
+            if sig.angle == -90:
+                raw_orientation = numpy.array([[ 0,-1, 0],
+                                               [ 1, 0, 0],
+                                               [ 0, 0, 1]]).dot(raw_orientation)
+
             # arrange matrix coefficients into correct order for Tm parameters
             text_params = list(raw_orientation[[0, 1, 0, 1], [0, 0, 1, 1]]) + raw_vector
 
             yield (text_params, 'Tm')
-            yield ([ByteStringObject(self.font_map[text])], 'Tj')
+            yield ([ByteStringObject(self.font_map[sig.char])], 'Tj')
 
         yield ([], 'ET')
 

@@ -20,7 +20,7 @@ def annotate(input_filename, output_filename, pages=None):
         matches = scheming.match_sigils(sigdict, line_ops)
 
         rdr.add_text(page_no, font_name,
-                [(s.char, pos, scale) for (s, pos, scale) in matches])
+                [(s, pos, scale) for (s, pos, scale) in matches])
 
     wtr = PyPDF2.PdfFileWriter()
     for p in rdr.pages:

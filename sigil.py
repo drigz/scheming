@@ -35,10 +35,10 @@ class Sigil(object):
     def rotated(self, angle=-90):
         '''Return a copy of the sigil rotated clockwise by the given angle.'''
 
-        angle = angle * numpy.pi / 180.0
+        theta = angle * numpy.pi / 180.0
 
-        matrix = numpy.array([[ numpy.cos(angle), numpy.sin(angle)],
-                              [-numpy.sin(angle), numpy.cos(angle)]])
+        matrix = numpy.array([[ numpy.cos(theta), numpy.sin(theta)],
+                              [-numpy.sin(theta), numpy.cos(theta)]])
 
         trans_ops = [(list(matrix.dot(coords)), operator)
                 for (coords, operator) in self.ops]
