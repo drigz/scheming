@@ -100,6 +100,25 @@ class SigilDict(dict):
         json.dump({k: [s.to_dict() for s in v] for (k, v) in self.items()},
                 json_file, sort_keys=True, indent=4)
 
+def remove_zero_ops(ops, tol=0.01):
+    '''Given a list of absolute ops, remove all ops with a length of less than
+    tol (0.01 by default).'''
+
+    assert ops[0][1] == 'm'
+    px, py = ops[0][0]
+
+    ans = [ops[0]]
+    tol = 0.01
+
+    for (x, y), c in ops[1:]:
+        n2 = (x-px) ** 2 + (y-py) ** 2
+
+        if n2 > tol ** 2:
+            ans.append( ((x, y), c) )
+            px, py = x, y
+
+    return ans
+
 def diff_ops(ops):
     '''Convert a list of absolute ops (eg from a PDF) to differential ops,
     by subtracting the coords of the first 'm' op.'''

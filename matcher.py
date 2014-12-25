@@ -25,7 +25,8 @@ def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
     if len(abs_ops) < 2:
         return []
 
-    ops = sigil.diff_ops(abs_ops)
+    non_zero_abs_ops = sigil.remove_zero_ops(abs_ops)
+    ops = sigil.diff_ops(non_zero_abs_ops)
 
     matches = match_without_scale(sigdict, ops)
 
@@ -33,7 +34,7 @@ def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
         return []
 
     matches = remove_submatches(matches)
-    matches = check_scales(matches, abs_ops, ops)
+    matches = check_scales(matches, non_zero_abs_ops, ops)
 
     if not skip_alignment_check:
         matches = check_alignment(sigdict, matches)
