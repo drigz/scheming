@@ -259,8 +259,6 @@ def check_alignment(sigdict, matches):
             m.next_matches.append(m2)
 
     # identify whether matches are in valid series
-    fv = open('valid', 'w')
-    fi = open('invalid', 'w')
     for m in matches:
         if m.prev_matches != []:
             # not start of series
@@ -269,11 +267,8 @@ def check_alignment(sigdict, matches):
         series = m.get_series()
 
         if series_is_valid(series):
-            fv.write(''.join(m.sig.char for m in series) + '\n')
             for m2 in series:
                 m2.passes_alignment_check = True
-        else:
-            fi.write(''.join(m.sig.char for m in series) + '\n')
 
     print '[check_alignment]: deleting', Counter(m.sig.char for m in
             matches if not m.passes_alignment_check)
