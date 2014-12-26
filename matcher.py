@@ -177,7 +177,7 @@ def check_scales(matches, abs_ops, ops):
 
             else:
                 len_error = abs(doc_n - sig_n * doc_sf)
-                if len_error > 0.2:
+                if len_error > 0.3:
                     scale_error = True
 
         # get absolute position of sig origin
@@ -251,7 +251,7 @@ def check_alignment(sigdict, matches):
             # remove matches at different angles or scales
             if m2.sig.angle != m.sig.angle:
                 continue
-            if m2.sf/m.sf < 0.8 or 1.2 < m2.sf/m.sf:
+            if m2.sf/m.sf < 0.9 or 1.1 < m2.sf/m.sf:
                 continue
 
             # add edge to graph
@@ -286,9 +286,12 @@ def check_alignment(sigdict, matches):
 
 def series_is_valid(series):
     '''A series of matches is valid if at least one has more than two
-    operations.'''
+    operations, and doesn't suffer case ambiguity (zZ, xX, wW, vV)'''
 
-    return any(len(m.sig.ops) > 2 for m in series)
+    def match_is_valid(m):
+        return len(m.sig.ops) > 2 and m.sig.char not in 'zZxXwWvV'
+
+    return any(match_is_valid(m) for m in series)
 
 def count_ambiguous(matches):
     '''Return a Counter() of sigils matching the same operations in the
