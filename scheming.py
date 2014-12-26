@@ -79,6 +79,11 @@ class OriginView(zoomview.ZoomView):
             if ulx <= m.origin[0] <= lrx and uly <= m.origin[1] <= lry:
                 sel_matches.append( (i, m) )
 
+        print ''.join(m.sig.char for (i, m) in sorted(sel_matches, key=lambda x: x[1].origin[0]))
+        print 'x:    ', ', '.join('{:6.2f}'.format(m.origin[0]) for (i, m) in sel_matches)
+        print 'y:    ', ', '.join('{:6.2f}'.format(m.origin[1]) for (i, m) in sel_matches)
+        print 'scale:', ', '.join('{:6.2f}'.format(m.sf) for (i, m) in sel_matches)
+
         if len(sel_matches) <= 3:
             # for few matches, we delete one
             print 'which match do you want to delete? options:'
@@ -113,12 +118,6 @@ class OriginView(zoomview.ZoomView):
 
         # reposition match markers
         self.add_matches()
-
-        import string
-        print string.printable[:-6]
-        print ''.join(m.sig.char for (i, m) in sorted(sel_matches, key=lambda x: x[1].origin[0]))
-        print 'x:    ', ', '.join('{:6.2f}'.format(m.origin[0]) for (i, m) in sel_matches)
-        print 'y:    ', ', '.join('{:6.2f}'.format(m.origin[1]) for (i, m) in sel_matches)
 
     def handle_event(self, ev):
         if self.removing_match:
@@ -155,6 +154,11 @@ class CaptureView(OriginView):
         selected_ops = list(extract_ops(self.abs_ops, ul, lr))
         if 'gap' in selected_ops:
             print 'gap in selected ops'
+            return
+
+        if 0:
+            for (x, y), c in sigil.diff_ops(selected_ops):
+                print '{:4.2f},{:4.2f} {}'.format(x, y, c)
             return
 
         self.capturing_sigil = True
