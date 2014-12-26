@@ -3,7 +3,7 @@ main interface.'''
 
 import math
 import re
-from intervaltree import Interval, IntervalTree
+from boxlookup import BoxLookup
 
 from collections import defaultdict, Counter
 
@@ -15,7 +15,40 @@ class Match(object):
         self.start = start
         self.end = start + len(sig.ops)
 
+        # adjacency lists and validity status for alignment check
+        self.next_matches = []
+        self.prev_matches = []
+        self.passes_alignment_check = False
+
+
+    def get_series(self):
+        '''During the alignment check, find all matches which are aligned
+        with this one, ie all the characters following this one in the current
+        word.'''
+
+        current = self
+        result = [self]
+
+        while len(current.next_matches) > 0:
+            current = current.next_match()
+            result.append(current)
+
+        return result
+
+    def next_match(self):
+        '''Return the next aligned match, ie the one with the smallest
+        x or y coordinate depending on angle.'''
+
+        if self.sig.angle == 0:
+            key = lambda m: m.origin[0]
+        elif self.sig.angle == -90:
+            key = lambda m: m.origin[1]
+
+        return min(self.next_matches, key=key)
+
     def __iter__(self):
+        '''Hack for compatibility with old tuples.'''
+
         if hasattr(self, 'origin'):
             return iter( (self.sig, self.origin, self.sf) )
         else:
@@ -56,7 +89,11 @@ def match_without_scale(sigdict, ops):
     # continuous lines
     all_opcodes = 'm{}m'.format(''.join(opcode for (_,opcode) in ops))
 
-    for sig in sum(sigdict.values(), []):
+    # combine sigils with rotated copies
+    all_sigils = sum(sigdict.values(), [])
+    all_sigils = all_sigils + [sig.rotated(-90) for sig in all_sigils]
+
+    for sig in all_sigils:
 
         # first find all places where the correct sequence of operation types is present
         sig_regex = '(?=m{}m)'.format(''.join(opcode for (_,opcode) in sig.ops))
@@ -177,70 +214,81 @@ def check_alignment(sigdict, matches):
     space_width = gap_width * 2 # the width of a space character
     epsilon = 0.001 # minimum gap between characters
 
-    # for each match, work out the range of possible starts of the next character:
-    #   FROM x + width
-    #   TO   x + width + gap + space + gap + one more gap for tolerance
-    windows = IntervalTree()
-    for i, m in enumerate(matches):
-        x, y = m.origin
-        windows.addi(
-                x + m.sf * m.sig.width + epsilon,
-                x + m.sf * (m.sig.width + 3 * gap_width + space_width),
-                (i, y))
-
-    # work out which matches are legit (because they are > 1 op) and which are
-    # aligned with a previous match
-    legit_indices = set()
-    aligned_with = dict()
-
+    # hardcoded y alignment tolerance
     max_y_sep = 0.7
+
+    matches_bl = BoxLookup(matches)
+
+    # for each match, work out the range of possible starts of the next character:
+    #   FROM x + width,
+    #        y - max_y_sep
+    #   TO   x + width + gap + space + gap + one more gap for tolerance,
+    #        y + max_y_sep
+    # or the corresponding rotated coordinates for a rotated character
+    #
+    # then, check all matches in this box for alignment and record them
     for i, m in enumerate(matches):
         x, y = m.origin
+        assert m.sig.angle in [0, -90]
 
-        # only delete single-operation matches as we're mainly worried about
-        # hyphens and underscores
-        if len(m.sig.ops) > 1:
-            legit_indices.add(i)
+        if m.sig.angle == 0:
+            box = [
+                x + m.sf * m.sig.width + epsilon,
+                y - max_y_sep,
+                x + m.sf * (m.sig.width + 3 * gap_width + space_width),
+                y + max_y_sep,
+                ]
+        elif m.sig.angle == -90:
+            box = [
+                x - max_y_sep,
+                y + m.sf * m.sig.width + epsilon,
+                x + max_y_sep,
+                y + m.sf * (m.sig.width + 3 * gap_width + space_width),
+                ]
+
+        for m2 in matches_bl.search(*box):
+
+            # remove matches at different angles or scales
+            if m2.sig.angle != m.sig.angle:
+                continue
+            if m2.sf/m.sf < 0.8 or 1.2 < m2.sf/m.sf:
+                continue
+
+            # add edge to graph
+            m2.prev_matches.append(m)
+            m.next_matches.append(m2)
+
+    # identify whether matches are in valid series
+    fv = open('valid', 'w')
+    fi = open('invalid', 'w')
+    for m in matches:
+        if m.prev_matches != []:
+            # not start of series
             continue
 
-        # first use the windows to work out which matches are the right
-        # x-distance away to be the preceding character, then check if they're
-        # on the same line
-        for window in windows[x]:
-            (window_i, window_y) = window.data
-            if abs(y - window_y) < max_y_sep:
-                aligned_with[i] = window_i
-                break
+        series = m.get_series()
 
-    # now, work out which single-operation matches are legit, as they are
-    # aligned with a previous character. the recursive search allows several
-    # underscores in a row, as long as they're preceded by another character,
-    # eg A___B.
-    deleted = set()
-
-    def check_is_legit(i):
-        if i in legit_indices:
-            return True
-        if i in deleted or i not in aligned_with:
-            return False
-
-        result = check_is_legit(aligned_with[i])
-
-        if result:
-            legit_indices.add(i)
+        if series_is_valid(series):
+            fv.write(''.join(m.sig.char for m in series) + '\n')
+            for m2 in series:
+                m2.passes_alignment_check = True
         else:
-            deleted.add(i)
+            fi.write(''.join(m.sig.char for m in series) + '\n')
 
-        return result
-
-    print '[check_alignment]: deleting', Counter(m.sig.char for i, m in
-            enumerate(matches) if not check_is_legit(i))
+    print '[check_alignment]: deleting', Counter(m.sig.char for m in
+            matches if not m.passes_alignment_check)
 
     # finally, exclude invalid matches
-    matches = [m for i, m in
-            enumerate(matches) if check_is_legit(i)]
+    matches = [m for m in
+            matches if m.passes_alignment_check]
 
     return matches
+
+def series_is_valid(series):
+    '''A series of matches is valid if at least one has more than two
+    operations.'''
+
+    return any(len(m.sig.ops) > 2 for m in series)
 
 def count_ambiguous(matches):
     '''Return a Counter() of sigils matching the same operations in the

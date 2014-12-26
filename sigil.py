@@ -19,8 +19,11 @@ class Sigil(object):
 
         self.angle = angle
 
-        x1, x2, _, _ = ops_bb(ops)
-        self.width = x2 - x1
+        x1, x2, y1, y2 = ops_bb(ops)
+        if angle == 0:
+            self.width = x2 - x1
+        elif angle == -90:
+            self.width = y2 - y1
 
     @staticmethod
     def from_abs_ops(ops):
