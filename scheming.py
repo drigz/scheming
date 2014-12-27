@@ -82,7 +82,7 @@ class OriginView(zoomview.ZoomView):
         print ''.join(m.sig.char for (i, m) in sorted(sel_matches, key=lambda x: x[1].origin[0]))
         print 'x:    ', ', '.join('{:6.2f}'.format(m.origin[0]) for (i, m) in sel_matches)
         print 'y:    ', ', '.join('{:6.2f}'.format(m.origin[1]) for (i, m) in sel_matches)
-        print 'scale:', ', '.join('{:6.2f}'.format(m.sf) for (i, m) in sel_matches)
+        print 'scale:', ', '.join('{:6.3f}'.format(m.sf) for (i, m) in sel_matches)
 
         if len(sel_matches) <= 3:
             # for few matches, we delete one
@@ -93,7 +93,7 @@ class OriginView(zoomview.ZoomView):
             self.removing_match = True
             return
 
-        ambi = count_ambiguous(sel_matches)
+        ambi = count_ambiguous(m for i, m in sel_matches)
         if len(ambi) > 0:
             print 'there are still ambiguous matches:', ambi
             print 'delete them before correcting origins'
@@ -167,11 +167,11 @@ class CaptureView(OriginView):
 
     def handle_event(self, ev):
         if self.capturing_sigil:
-            c = ev.unicode.encode('utf-8')
-
-            if len(c) != 1:
-                # modifier key/click or non-ascii character
+            if not hasattr(ev, 'unicode') or len(ev.unicode) != 1:
+                # modifier key/click
                 return
+
+            c = ev.unicode.encode('utf-8')
 
             print 'char:', repr(c)
             if c in self.sigdict:
