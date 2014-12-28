@@ -127,7 +127,10 @@ def remove_submatches(matches):
     '''Given a list of matches, removing all submatches.
 
     A submatch is a match whose operations are all part of a larger match, eg
-    matching a hyphen on the crossbar of an A.'''
+    matching a hyphen on the crossbar of an A.
+
+    Additionally, if the same letter is matched twice at the same point, the
+    earlier match is removed.'''
 
     def end_then_start(match):
         return (match.end, -match.start)
@@ -140,7 +143,9 @@ def remove_submatches(matches):
     for (i, m) in reversed(list(enumerate(matches))):
 
         if m.start > supermatch.start or \
-                (m.start == supermatch.start and m.end < supermatch.end):
+                (m.start == supermatch.start and m.end < supermatch.end) or \
+                (m.start == supermatch.start and m.end == supermatch.end and
+                        m.sig.char == supermatch.sig.char):
             deleted.append((m.sig.char, supermatch.sig.char))
             del matches[i]
 
@@ -258,7 +263,7 @@ def check_alignment(sigdict, matches):
             m2.prev_matches.append(m)
             m.next_matches.append(m2)
 
-    # identify whether matches are in valid series
+    # identify whether matches are in valid serieses
     for m in matches:
         if m.prev_matches != []:
             # not start of series
@@ -270,9 +275,6 @@ def check_alignment(sigdict, matches):
             for m2 in series:
                 m2.passes_alignment_check = True
 
-    print '[check_alignment]: deleting', Counter(m.sig.char for m in
-            matches if not m.passes_alignment_check)
-
     # finally, exclude invalid matches
     matches = [m for m in
             matches if m.passes_alignment_check]
@@ -281,10 +283,13 @@ def check_alignment(sigdict, matches):
 
 def series_is_valid(series):
     '''A series of matches is valid if at least one has more than two
-    operations, and doesn't suffer case ambiguity (zZ, xX, wW, vV)'''
+    operations, and the series doesn't suffer case ambiguity (P, V, W, X, Z)'''
+
+    if all(m.sig.char.upper() in 'PVWXZ' for m in series):
+        return False
 
     def match_is_valid(m):
-        return len(m.sig.ops) > 2 and m.sig.char not in 'zZxXwWvV'
+        return len(m.sig.ops) > 2
 
     return any(match_is_valid(m) for m in series)
 
