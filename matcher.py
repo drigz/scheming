@@ -121,6 +121,9 @@ def match_op(step1, step2, tol=0.93):
     if n1 < 0.01 or n2 < 0.01:
         return n1 < 0.01 and n2 < 0.01
 
+    if c1 == 'c':
+        tol = 0.7
+
     return (x1*x2+y1*y2)/n1/n2 > tol
 
 def remove_submatches(matches):
@@ -177,12 +180,18 @@ def check_scales(matches, abs_ops, ops):
             sig_n = math.sqrt(sig_op[0][0]**2 + sig_op[0][1]**2)
             doc_n = math.sqrt(doc_op[0][0]**2 + doc_op[0][1]**2)
 
+            # set position tolerance based on operation type
+            if sig_op[1] == 'c':
+                tol = 4 * doc_sf
+            else:
+                tol = 0.3
+
             if sig_n < 0.01 or doc_n < 0.01:
                 assert sig_n < 0.01 and doc_n < 0.01, "match_op() isn't doing its job"
 
             else:
                 len_error = abs(doc_n - sig_n * doc_sf)
-                if len_error > 0.3:
+                if len_error > tol:
                     scale_error = True
 
         # get absolute position of sig origin
