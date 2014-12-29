@@ -138,7 +138,10 @@ def diff_ops(ops):
 
 def ops_bb(ops):
     '''Given a differential ops list, determine the bounding box as
-    (min x, max x, min y, max y).'''
+    (min x, max x, min y, max y).
+
+    It ignores the points on curve (c) operators, since the line doesn't
+    necessarily reach these points.'''
 
     px, py = 0, 0
     xs, ys = [0], [0]
@@ -146,8 +149,9 @@ def ops_bb(ops):
     for (dx, dy), c in ops:
         px += dx
         py += dy
-        xs.append(px)
-        ys.append(py)
+        if c != 'c':
+            xs.append(px)
+            ys.append(py)
 
     return (min(xs), max(xs), min(ys), max(ys))
 
