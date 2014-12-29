@@ -66,8 +66,8 @@ def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
     if len(matches) == 0:
         return []
 
-    matches = remove_submatches(matches)
     matches = check_scales(matches, non_zero_abs_ops, ops)
+    matches = remove_submatches(matches)
 
     if not skip_alignment_check:
         matches = check_alignment(sigdict, matches)
@@ -140,7 +140,7 @@ def remove_submatches(matches):
 
     supermatch = matches[-1]
 
-    for (i, m) in reversed(list(enumerate(matches))):
+    for (i, m) in reversed(list(enumerate(matches[:-1]))):
 
         if m.start > supermatch.start or \
                 (m.start == supermatch.start and m.end < supermatch.end) or \
