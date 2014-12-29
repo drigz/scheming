@@ -152,13 +152,22 @@ class CaptureView(OriginView):
         (lrx, lry) = lr
 
         selected_ops = list(extract_ops(self.abs_ops, ul, lr))
-        if 'gap' in selected_ops:
-            print 'gap in selected ops'
-            return
 
         if 0:
-            for (x, y), c in sigil.diff_ops(selected_ops):
-                print '{:4.2f},{:4.2f} {}'.format(x, y, c)
+            print ' '.join('{:4.2f},{:4.2f}{}'.format(x, y, c)
+                    for ((x,y),c) in sigil.diff_ops(selected_ops))
+            return
+
+        sel_scales = [m.sf for m in self.matches
+                    if ulx <= m.origin[0] <= lrx and uly <= m.origin[1] <= lry]
+        if len(sel_scales) > 0:
+            print 'match selected, showing scale'
+            print ', '.join('{:6.3f}'.format(sf) for sf in sel_scales)
+            print 'median: {:6.3f}'.format(numpy.median(numpy.array(sel_scales)))
+            return
+
+        if 'gap' in selected_ops:
+            print 'gap in selected ops, showing scales of matches'
             return
 
         self.capturing_sigil = True
