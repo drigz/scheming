@@ -167,7 +167,8 @@ class CaptureView(OriginView):
             return
 
         if 'gap' in selected_ops:
-            print 'gap in selected ops, showing scales of matches'
+            print 'gap in selected ops'
+            print ' '.join(op if op == 'gap' else op[-1] for op in selected_ops)
             return
 
         self.capturing_sigil = True
