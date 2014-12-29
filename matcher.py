@@ -182,7 +182,7 @@ def check_scales(matches, abs_ops, ops):
 
             # set position tolerance based on operation type
             if sig_op[1] == 'c':
-                tol = 4 * doc_sf
+                tol = max(4 * doc_sf, 0.3)
             else:
                 tol = 0.3
 
