@@ -132,7 +132,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
         return new_font_name
 
-    def add_text(self, page_no, font, text_items):
+    def add_text(self, page_no, font, text_items, debug=False):
         '''Adds text, given as a {string: coords} to the given page.'''
 
         page = self.getPage(page_no)
@@ -141,7 +141,7 @@ class SchematicReader(PyPDF2.PdfFileReader):
         newContentsArray.append(PageObject._pushPopGS(page.getContents(), page.pdf))
 
         addedContents = NovelContentStream(page.pdf)
-        addedContents.operations = self.text_to_operations(page, font, text_items)
+        addedContents.operations = self.text_to_operations(page, font, text_items, debug)
         newContentsArray.append(addedContents)
 
         newContents = ContentStream(newContentsArray, page.pdf).flateEncode()
@@ -170,15 +170,18 @@ class SchematicReader(PyPDF2.PdfFileReader):
         return map(to_operation,
                 self.text_to_unwrapped_operations(*args, **kwargs))
 
-    def text_to_unwrapped_operations(self, page, font, text_items):
+    def text_to_unwrapped_operations(self, page, font, text_items, debug):
         yield ([], 'BT')
 
         # this font size here seems to have no effect, and you
         # have to change the scale factor in the text matrix
         yield ([NameObject(font), 1], 'Tf')
 
-        # switch to red text
-        yield ([1, 0, 0], 'rg')
+        if debug:
+            # switch to red text for debugging
+            yield ([1, 0, 0], 'rg')
+        else:
+            yield ([3], 'Tr')
 
         itm = numpy.linalg.inv(self.get_initial_ctm(page))
 
