@@ -1,5 +1,5 @@
 import PyPDF2
-import pdf, scheming, sigil
+import pdf, matcher, sigil
 from collections import Counter
 
 import argparse
@@ -17,7 +17,7 @@ def annotate(input_filename, output_filename, pages=None):
 
         line_ops = rdr.get_line_ops(page_no)
 
-        matches = scheming.match_sigils(sigdict, line_ops)
+        matches = matcher.match_sigils(sigdict, line_ops)
 
         rdr.add_text(page_no, font_name,
                 [(s, pos, scale) for (s, pos, scale) in matches])
