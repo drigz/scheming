@@ -62,13 +62,8 @@ def match_sigils(sigdict, abs_ops, skip_alignment_check=False):
     ops = sigil.diff_ops(non_zero_abs_ops)
 
     matches = match_without_scale(sigdict, ops)
-
-    if len(matches) == 0:
-        return []
-
     matches = check_scales(matches, non_zero_abs_ops, ops)
     matches = remove_submatches(matches)
-
     if not skip_alignment_check:
         matches = check_alignment(sigdict, matches)
 
@@ -134,6 +129,9 @@ def remove_submatches(matches):
 
     Additionally, if the same letter is matched twice at the same point, the
     earlier match is removed.'''
+
+    if len(matches) == 0:
+        return []
 
     def end_then_start(match):
         return (match.end, -match.start)
