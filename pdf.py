@@ -49,9 +49,12 @@ class SchematicReader(PyPDF2.PdfFileReader):
 
             elif op[1] == 'cm':
                 a,b,c,d,e,f = map(float, op[0])
-                ctm = ctm.dot(numpy.array([[ a,  c, e],
+                try:
+                    ctm = ctm.dot(numpy.array([[ a,  c, e],
                                            [ b,  d, f],
                                            [ 0,  0, 1]]))
+                except:
+                    import pdb; pdb.set_trace()
 
             elif op[1] in 'ml':
                 coords = ctm.dot(map(float, op[0]) + [1])
@@ -73,27 +76,28 @@ class SchematicReader(PyPDF2.PdfFileReader):
             page = self.getPage(page)
 
         rotation = page.get('/Rotate', 0)
-        [xl, yl, xh, yh] = page.get('/CropBox', page['/MediaBox'])
+        box = page.get('/CropBox', page['/MediaBox'])
+        [xl, yl, xh, yh] = map(float, box)
 
         if xl != 0 or yl != 0:
             raise NotImplementedError('Page corner is not at (0, 0)')
 
         if rotation == 0:
-            return numpy.array([[ 1,  0, 0],
-                                [ 0,  1, 0],
-                                [ 0,  0, 1]])
+            return numpy.array([[ 1.,  0., 0.],
+                                [ 0.,  1., 0.],
+                                [ 0.,  0., 1.]])
         elif rotation == 90:
-            return numpy.array([[ 0,  1,  0],
-                                [-1,  0, xh],
-                                [ 0,  0,  1]])
+            return numpy.array([[ 0.,  1., 0.],
+                                [-1.,  0., xh],
+                                [ 0.,  0., 1.]])
         elif rotation == 180:
-            return numpy.array([[-1,  0, xh],
-                                [ 0, -1, yh],
-                                [ 0,  0,  1]])
+            return numpy.array([[-1.,  0., xh],
+                                [ 0., -1., yh],
+                                [ 0.,  0., 1.]])
         elif rotation == 270:
-            return numpy.array([[ 0, -1, yh],
-                                [ 1,  0,  0],
-                                [ 0,  0,  1]])
+            return numpy.array([[ 0., -1., yh],
+                                [ 1.,  0., 0.],
+                                [ 0.,  0., 1.]])
         else:
             raise NotImplementedError('unhandled rotation: %r' % rotation)
 
