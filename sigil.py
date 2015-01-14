@@ -1,5 +1,9 @@
 import json
-import numpy
+
+try:
+    import numpy
+except ImportError:
+    numpy = None
 
 class Sigil(object):
     def __init__(self, ops, origin=None, char=None, angle=0):
@@ -37,6 +41,9 @@ class Sigil(object):
 
     def rotated(self, angle=-90):
         '''Return a copy of the sigil rotated clockwise by the given angle.'''
+
+        if numpy is None:
+            raise NotImplementedError('rotated() requires numpy')
 
         theta = angle * numpy.pi / 180.0
 
