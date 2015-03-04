@@ -97,13 +97,21 @@ def result(id):
         abort(404)
 
     state, original_filename = rows[0]
+    new_filename = adjust_filename(original_filename)
 
     if state != State.Succeeded:
         return redirect(url_for('status', id=id))
 
     return send_from_directory(
             app.config['RESULT_FOLDER'], id + '.pdf',
-            as_attachment=True, attachment_filename=original_filename)
+            as_attachment=True, attachment_filename=new_filename)
+
+def adjust_filename(filename):
+    '''Add '_searchable' to the filename to make it clear it's been
+    processed.'''
+    
+    root, ext = os.path.splitext(filename)
+    return root + '_searchable' + ext
 
 @app.route('/delete/<id>', methods=['POST'])
 def delete(id):
