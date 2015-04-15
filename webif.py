@@ -5,11 +5,13 @@ from dbaccess import State, connect_db
 
 ALLOWED_EXTENSIONS = set(['pdf'])
 
+BASE_PATH = '/usr/local/scheming'
+
 app = Flask('scheming')
 app.config.update({
-    'UPLOAD_FOLDER': 'uploads/',
-    'RESULT_FOLDER': 'results/',
-    'DATABASE': 'scheming.db',
+    'UPLOAD_FOLDER': os.path.join(BASE_PATH, 'uploads/'),
+    'RESULT_FOLDER': os.path.join(BASE_PATH, 'results/'),
+    'DATABASE': os.path.join(BASE_PATH, 'scheming.db'),
     'DEBUG': True,
 })
 

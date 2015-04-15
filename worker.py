@@ -6,9 +6,11 @@ import os
 from dbaccess import connect_db, State
 import annotate
 
-DATABASE = 'scheming.db'
-UPLOADS = 'uploads/'
-RESULTS = 'results/'
+BASE_PATH = '/usr/local/scheming'
+
+DATABASE = os.path.join(BASE_PATH, 'scheming.db')
+UPLOADS = os.path.join(BASE_PATH, 'uploads/')
+RESULTS = os.path.join(BASE_PATH, 'results/')
 CHECK_INTERVAL = 1 # number of seconds to wait between checking for work
 
 def main():
