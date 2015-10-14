@@ -65,12 +65,15 @@ def upload_file():
             filename = secure_filename(file.filename)
 
             cur = db.execute('insert into uploaded (original_filename, state) values (?, ?)',
-                    [filename, State.New])
+                    [filename, State.Uploading])
             db.commit()
-
             id = str(cur.lastrowid)
 
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], id+'.pdf'))
+
+            db.execute('update uploaded set state = ? where id = ?', [State.New, id])
+            db.commit()
+
             return redirect(url_for('status', id=id))
 
     return render_template('index.html',

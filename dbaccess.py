@@ -7,6 +7,7 @@ class State(object):
     Failed = 2
     Succeeded = 3
     Deleted = 4
+    Uploading = 5
 
 def connect_db(db_path):
     """Connects to the specific database."""
