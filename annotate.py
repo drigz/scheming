@@ -1,6 +1,7 @@
 import PyPDF2
 import pdf, matcher, sigil
 from collections import Counter
+import os.path
 
 import argparse
 
@@ -34,11 +35,15 @@ if __name__ == '__main__':
             help="comma-separated list of pages to process [default: all]")
     parser.add_argument('input', nargs='?', default='P1318-005a.pdf',
             help='path to input PDF  [default: P1318-005a.pdf]')
-    parser.add_argument('output', nargs='?', default='modified.pdf',
-            help='path to output PDF [default: modified.pdf]')
+    parser.add_argument('output', nargs='?', default=None,
+            help='path to output PDF [default: <input>_searchable.pdf]')
     args = parser.parse_args()
 
     if args.pages is not None:
         args.pages = map(int, args.pages.split(','))
+
+    if args.output is None:
+        root, ext = os.path.splitext(args.input)
+        args.output = '{}_searchable{}'.format(root, ext)
 
     annotate(args.input, args.output, pages=args.pages)
